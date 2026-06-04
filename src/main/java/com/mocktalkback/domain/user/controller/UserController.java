@@ -10,12 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mocktalkback.domain.user.dto.MyArticleItemResponse;
+import com.mocktalkback.domain.user.dto.MyBoardItemResponse;
+import com.mocktalkback.domain.user.dto.MyCommentItemResponse;
 import com.mocktalkback.domain.user.dto.UserDeleteRequest;
 import com.mocktalkback.domain.user.dto.UserMentionResponse;
 import com.mocktalkback.domain.user.dto.UserProfileResponse;
 import com.mocktalkback.domain.user.dto.UserProfileUpdateRequest;
-import com.mocktalkback.domain.user.dto.MyArticleItemResponse;
-import com.mocktalkback.domain.user.dto.MyCommentItemResponse;
 import com.mocktalkback.domain.user.service.UserService;
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 import com.mocktalkback.global.common.dto.PageResponse;
@@ -81,6 +82,26 @@ public class UserController {
     ) {
         userService.deleteMyAccount(request);
         return ApiEnvelope.ok();
+    }
+
+    @GetMapping("/users/me/boards")
+    @Operation(summary = "내 게시판 목록", description = "로그인된 사용자가 운영 중인 게시판(소유자/운영자) 목록을 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = ApiEnvelope.class))
+        ),
+        @ApiResponse(responseCode = "400", description = "요청 값 오류"),
+        @ApiResponse(responseCode = "401", description = "인증 필요")
+    })
+    public ApiEnvelope<PageResponse<MyBoardItemResponse>> getMyBoards(
+        @Parameter(description = "페이지 번호(0부터 시작)", example = "0")
+        @RequestParam(name = "page", defaultValue = "0") int page,
+        @Parameter(description = "페이지 크기(최대 50)", example = "10")
+        @RequestParam(name = "size", defaultValue = "10") int size
+    ) {
+        return ApiEnvelope.ok(userService.getMyBoards(page, size));
     }
 
     @GetMapping("/users/me/articles")

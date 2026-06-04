@@ -7,7 +7,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 import com.mocktalkback.global.common.dto.ApiError;
 import com.mocktalkback.global.common.dto.ErrorCode;
@@ -18,9 +18,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    public JwtAuthEntryPoint(ObjectMapper objectMapper) {
+    public JwtAuthEntryPoint(JsonMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

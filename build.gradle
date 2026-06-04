@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.5.9'
+	id 'org.springframework.boot' version '4.0.6'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -10,7 +10,7 @@ description = 'mocktalkback'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -24,26 +24,30 @@ repositories {
 	mavenCentral()
 }
 
+def nativeAccessJvmArgs = ['--enable-native-access=ALL-UNNAMED']
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-restclient'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
 	// 모니터링, 메트릭
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
-	// 이미지 최적화
+	// 이미지 최적화 (WebP ImageIO — gotson 후속, JAR 내 네이티브 번들)
 	implementation 'net.coobird:thumbnailator:0.4.21'
-	implementation 'com.github.gotson:webp-imageio:0.2.2'
+	runtimeOnly 'com.github.usefulness:webp-imageio:0.10.2'
 
 	// 오브젝트 스토리지
 	implementation 'io.minio:minio:8.5.17'
 
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.15'  // swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'  // swagger (Boot 4)
 
 	// QueryDSL (OpenFeign fork)
 	implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.1'
@@ -54,25 +58,20 @@ dependencies {
 	annotationProcessor "org.mapstruct:mapstruct-processor:1.6.3"
 	testAnnotationProcessor "org.mapstruct:mapstruct-processor:1.6.3"
 
-	// jwt
-	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
-	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
-	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-
 	implementation 'org.bouncycastle:bcprov-jdk18on:1.83'  // argon2
 	implementation 'com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20260102.1'  // owasp sanitizer
 	implementation 'com.vladsch.flexmark:flexmark-all:0.64.8'  // markdown 렌더링
 	implementation 'org.yaml:snakeyaml:2.4'  // yaml frontmatter / manifest 파싱
 	implementation 'org.apache.poi:poi-ooxml:5.4.1'  // XLSX 임포트 파싱
 
-	implementation 'org.flywaydb:flyway-core'  // flyway
+	implementation 'org.springframework.boot:spring-boot-starter-flyway'
 	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
 	// implementation 'org.flywaydb:flyway-mysql'
 	// runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
-	developmentOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.12.1'  // P6Spy (dev 전용 SQL 로그 포맷)
-	compileOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.12.1'  // P6Spy compile-only
+	developmentOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:2.0.1'  // P6Spy (dev 전용 SQL 로그 포맷, Boot 4)
+	compileOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:2.0.1'  // P6Spy compile-only
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'  // devtools
@@ -87,7 +86,9 @@ dependencies {
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'  // (선택) IDE/빌드에서 AP 경고 나면 명시
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-jackson-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -106,6 +107,15 @@ dependencies {
 // 	options.generatedSourceOutputDirectory = file(querydslDir)
 // }
 
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs << '-Xlint:deprecation'
+}
+
+tasks.named('bootRun') {
+	jvmArgs nativeAccessJvmArgs
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs nativeAccessJvmArgs
 }

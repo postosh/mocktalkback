@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import com.mocktalkback.support.MocktalkWebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.mocktalkback.domain.role.type.AuthBits;
 import com.mocktalkback.domain.role.type.RoleNames;
 
-@WebMvcTest(controllers = TestUserRootRoleController.class)
+@MocktalkWebMvcTest(controllers = TestUserRootRoleController.class)
 @Import(UserRootRoleTest.TestSecurityConfig.class)
 @TestPropertySource(properties = {
         "SERVER_PORT=0",

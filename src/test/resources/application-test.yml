@@ -1,2 +1,7 @@
 server:
   port: 0
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration

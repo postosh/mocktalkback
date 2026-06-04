@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.content.config.ContentMarketProperties;
 import com.mocktalkback.domain.content.type.MarketInstrumentCode;
 
@@ -16,7 +16,7 @@ class YahooFinanceMarketQuoteClientTest {
     void parseQuote_reads_price_and_timestamp() throws Exception {
         // Given: 야후 파이낸스 차트 응답 예시가 있다.
         ContentMarketProperties properties = new ContentMarketProperties();
-        YahooFinanceMarketQuoteClient client = new YahooFinanceMarketQuoteClient(RestClient.builder(), new ObjectMapper(), properties);
+        YahooFinanceMarketQuoteClient client = new YahooFinanceMarketQuoteClient(RestClient.builder(), new JsonMapper(), properties);
         String responseBody = """
             {
               "chart": {

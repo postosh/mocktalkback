@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriBuilder;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.newsbot.config.NewsBotProperties;
 import com.mocktalkback.domain.newsbot.service.NewsBotSourceItem;
 import com.mocktalkback.domain.newsbot.service.NewsSourceClient;
@@ -22,11 +22,11 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
     private static final String BASE_URL = "https://dev.to";
 
     private final RestClient restClient;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public DevToSourceClient(
         RestClient.Builder restClientBuilder,
-        ObjectMapper objectMapper,
+        JsonMapper objectMapper,
         NewsBotProperties newsBotProperties
     ) {
         super(newsBotProperties);
@@ -61,9 +61,9 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
             JsonNode root = objectMapper.readTree(responseBody);
             List<NewsBotSourceItem> items = new ArrayList<>();
             for (JsonNode articleNode : root) {
-                String id = articleNode.path("id").asText();
-                String title = articleNode.path("title").asText(null);
-                String url = articleNode.path("url").asText(null);
+                String id = articleNode.path("id").asString();
+                String title = articleNode.path("title").asString(null);
+                String url = articleNode.path("url").asString(null);
                 if (title == null || title.isBlank() || url == null || url.isBlank()) {
                     continue;
                 }
@@ -73,9 +73,9 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
                     url,
                     buildSummary(articleNode),
                     "DEV Community",
-                    articleNode.path("user").path("name").asText(null),
-                    parseInstant(articleNode.path("published_timestamp").asText(null)),
-                    parseInstant(articleNode.path("edited_at").asText(null))
+                    articleNode.path("user").path("name").asString(null),
+                    parseInstant(articleNode.path("published_timestamp").asString(null)),
+                    parseInstant(articleNode.path("edited_at").asString(null))
                 ));
             }
             return items;
@@ -97,11 +97,11 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
     }
 
     private String buildSummary(JsonNode articleNode) {
-        String description = articleNode.path("description").asText("");
-        String readablePublishDate = articleNode.path("readable_publish_date").asText("");
+        String description = articleNode.path("description").asString("");
+        String readablePublishDate = articleNode.path("readable_publish_date").asString("");
         String tagList = articleNode.path("tag_list").isArray()
             ? joinTags(articleNode.path("tag_list"))
-            : articleNode.path("tag_list").asText("");
+            : articleNode.path("tag_list").asString("");
         StringBuilder builder = new StringBuilder();
         if (!description.isBlank()) {
             builder.append(description.trim()).append("\n\n");
@@ -118,7 +118,7 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
     private String joinTags(JsonNode tagArray) {
         List<String> tags = new ArrayList<>();
         for (JsonNode tagNode : tagArray) {
-            String tag = tagNode.asText(null);
+            String tag = tagNode.asString(null);
             if (tag != null && !tag.isBlank()) {
                 tags.add(tag.trim());
             }

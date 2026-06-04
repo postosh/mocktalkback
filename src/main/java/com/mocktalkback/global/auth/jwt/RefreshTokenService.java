@@ -10,12 +10,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 
 @Service
 public class RefreshTokenService {
@@ -56,12 +56,12 @@ public class RefreshTokenService {
     }
 
     public Rotated rotate(String refreshToken) {
-        Claims c = parseRefresh(refreshToken);
+        Jwt token = parseRefresh(refreshToken);
 
-        Long userId = Long.valueOf(c.getSubject());
-        String sid = (String) c.get("sid");
-        String jti = c.getId();
-        boolean rememberMe = resolveRememberMe(c);
+        Long userId = Long.valueOf(token.getSubject());
+        String sid = token.getClaimAsString("sid");
+        String jti = token.getId();
+        boolean rememberMe = resolveRememberMe(token);
 
         if (sid == null || jti == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
@@ -70,7 +70,6 @@ public class RefreshTokenService {
         String newJti = UUID.randomUUID().toString();
         long nowSec = Instant.now().getEpochSecond();
 
-        // Lua: compare current jti and rotate atomically while honoring absolute max TTL.
         Long result = redis.execute(
                 rotateScript,
                 List.of(key(sid), absKey(sid)),
@@ -92,14 +91,10 @@ public class RefreshTokenService {
     }
 
     public void revoke(String refreshToken) {
-        Claims c = parseRefresh(refreshToken);
-        String sid = (String) c.get("sid");
+        Jwt token = parseRefresh(refreshToken);
+        String sid = token.getClaimAsString("sid");
         redis.delete(List.of(key(sid), absKey(sid)));
     }
-
-    // private void saveSidJti(String sid, String jti) {
-    //     saveSidJti(sid, jti, jwt.refreshTtlSec());
-    // }
 
     private void saveSidJti(String sid, String jti, long ttlSec) {
         redis.opsForValue().set(key(sid), jti, Duration.ofSeconds(ttlSec));
@@ -117,18 +112,34 @@ public class RefreshTokenService {
         return ABS_KEY_PREFIX + sid;
     }
 
-    private Claims parseRefresh(String token) {
+    private Jwt parseRefresh(String token) {
         try {
             return jwt.parseRefreshClaims(token);
-        } catch (ExpiredJwtException e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_EXPIRED");
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (JwtException e) {
+            if (isExpiredJwt(e)) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_EXPIRED");
+            }
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
+        } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
         }
     }
 
-    private boolean resolveRememberMe(Claims c) {
-        Object raw = c.get("rm");
+    private static boolean isExpiredJwt(JwtException exception) {
+        if (exception instanceof JwtValidationException validation) {
+            return validation.getErrors().stream()
+                    .map(OAuth2Error::getDescription)
+                    .anyMatch(RefreshTokenService::describesExpiry);
+        }
+        return describesExpiry(exception.getMessage());
+    }
+
+    private static boolean describesExpiry(String description) {
+        return description != null && description.toLowerCase().contains("expired");
+    }
+
+    private boolean resolveRememberMe(Jwt jwt) {
+        Object raw = jwt.getClaim("rm");
         if (raw instanceof Boolean value) {
             return value;
         }
@@ -154,6 +165,4 @@ public class RefreshTokenService {
             long refreshExpiresInSec,
             boolean rememberMe
     ) {}
-
-
 }

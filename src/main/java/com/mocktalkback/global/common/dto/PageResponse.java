@@ -30,8 +30,12 @@ public record PageResponse<T>(
     boolean hasPrevious
 ) {
     public static <T> PageResponse<T> from(Page<T> page) {
+        return from(page, page.getContent());
+    }
+
+    public static <T> PageResponse<T> from(Page<?> page, List<T> items) {
         return new PageResponse<>(
-            page.getContent(),
+            items,
             page.getNumber(),
             page.getSize(),
             page.getTotalElements(),

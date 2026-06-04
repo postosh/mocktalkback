@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 import com.mocktalkback.global.common.dto.ApiError;
 import com.mocktalkback.global.common.dto.ErrorCode;
@@ -25,11 +25,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class OriginAllowlistFilter extends OncePerRequestFilter {
 
     private final Set<String> allowedOrigins;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public OriginAllowlistFilter(
             @Value("${SECURITY_ORIGIN_ALLOWLIST:}") String allowlist,
-            ObjectMapper objectMapper
+            JsonMapper objectMapper
     ) {
         this.allowedOrigins = parseAllowlist(allowlist);
         this.objectMapper = objectMapper;

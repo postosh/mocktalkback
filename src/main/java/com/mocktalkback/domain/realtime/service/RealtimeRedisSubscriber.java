@@ -6,8 +6,8 @@ import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.realtime.config.RealtimeRedisProperties;
 import com.mocktalkback.domain.realtime.dto.BoardRealtimeRedisMessage;
 import com.mocktalkback.domain.realtime.dto.NotificationRealtimeRedisMessage;
@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RealtimeRedisSubscriber implements MessageListener {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final RealtimeRedisProperties realtimeRedisProperties;
     private final NotificationRealtimeSseService notificationRealtimeSseService;
     private final BoardRealtimeSseService boardRealtimeSseService;
@@ -56,7 +56,7 @@ public class RealtimeRedisSubscriber implements MessageListener {
                 message.eventId(),
                 message.occurredAt()
             );
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             log.warn("notification redis 메시지 파싱에 실패했습니다. payload={}", payload, ex);
         }
     }
@@ -74,7 +74,7 @@ public class RealtimeRedisSubscriber implements MessageListener {
                 message.eventId(),
                 message.occurredAt()
             );
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             log.warn("board redis 메시지 파싱에 실패했습니다. payload={}", payload, ex);
         }
     }

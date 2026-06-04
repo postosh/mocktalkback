@@ -8,8 +8,8 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.content.config.ContentMarketProperties;
 import com.mocktalkback.domain.content.type.MarketInstrumentCode;
 
@@ -22,12 +22,12 @@ public class YahooFinanceMarketQuoteClient implements ExternalMarketQuoteClient 
     private static final String PROVIDER_NAME = "YAHOO_FINANCE";
 
     private final RestClient restClient;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final ContentMarketProperties properties;
 
     public YahooFinanceMarketQuoteClient(
         RestClient.Builder restClientBuilder,
-        ObjectMapper objectMapper,
+        JsonMapper objectMapper,
         ContentMarketProperties properties
     ) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
