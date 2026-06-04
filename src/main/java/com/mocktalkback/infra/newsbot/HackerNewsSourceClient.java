@@ -8,8 +8,8 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.newsbot.config.NewsBotProperties;
 import com.mocktalkback.domain.newsbot.service.NewsBotSourceItem;
 import com.mocktalkback.domain.newsbot.service.NewsSourceClient;
@@ -21,11 +21,11 @@ public class HackerNewsSourceClient extends AbstractNewsSourceClient implements 
     private static final String BASE_URL = "https://hacker-news.firebaseio.com";
 
     private final RestClient restClient;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public HackerNewsSourceClient(
         RestClient.Builder restClientBuilder,
-        ObjectMapper objectMapper,
+        JsonMapper objectMapper,
         NewsBotProperties newsBotProperties
     ) {
         super(newsBotProperties);
@@ -70,18 +70,18 @@ public class HackerNewsSourceClient extends AbstractNewsSourceClient implements 
                 if (itemNode.path("deleted").asBoolean(false) || itemNode.path("dead").asBoolean(false)) {
                     continue;
                 }
-                if (!"story".equals(itemNode.path("type").asText())) {
+                if (!"story".equals(itemNode.path("type").asString())) {
                     continue;
                 }
-                String title = itemNode.path("title").asText(null);
+                String title = itemNode.path("title").asString(null);
                 if (title == null || title.isBlank()) {
                     continue;
                 }
-                String externalUrl = itemNode.path("url").asText();
+                String externalUrl = itemNode.path("url").asString();
                 if (externalUrl == null || externalUrl.isBlank()) {
                     externalUrl = "https://news.ycombinator.com/item?id=" + itemId;
                 }
-                String text = compactText(itemNode.path("text").asText(null));
+                String text = compactText(itemNode.path("text").asString(null));
                 String summary = buildSummary(text, itemNode);
                 items.add(new NewsBotSourceItem(
                     String.valueOf(itemId),
@@ -89,7 +89,7 @@ public class HackerNewsSourceClient extends AbstractNewsSourceClient implements 
                     externalUrl,
                     summary,
                     "Hacker News",
-                    itemNode.path("by").asText(null),
+                    itemNode.path("by").asString(null),
                     itemNode.path("time").isNumber() ? Instant.ofEpochSecond(itemNode.path("time").asLong()) : null,
                     null
                 ));

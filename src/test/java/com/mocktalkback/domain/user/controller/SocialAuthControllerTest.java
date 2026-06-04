@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.realtime.service.NotificationRealtimeTicketService;
 import com.mocktalkback.domain.user.dto.AccessTokenResult;
 import com.mocktalkback.domain.user.dto.OAuth2CodeRequest;
@@ -15,6 +15,7 @@ import com.mocktalkback.global.auth.CookieUtil;
 import com.mocktalkback.global.auth.OriginAllowlistFilter;
 import com.mocktalkback.global.auth.jwt.JwtAccessDeniedHandler;
 import com.mocktalkback.global.auth.jwt.JwtAuthEntryPoint;
+import com.mocktalkback.global.auth.jwt.JwtSecurityConfig;
 import com.mocktalkback.global.auth.jwt.JwtTokenProvider;
 import com.mocktalkback.global.auth.jwt.RefreshTokenService;
 import com.mocktalkback.global.auth.oauth2.CustomOAuth2UserService;
@@ -23,16 +24,17 @@ import com.mocktalkback.global.auth.oauth2.OAuth2LoginSuccessHandler;
 import com.mocktalkback.global.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import com.mocktalkback.support.MocktalkWebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(controllers = AuthController.class)
+@MocktalkWebMvcTest(controllers = AuthController.class)
 @Import({
         SecurityConfig.class,
+        JwtSecurityConfig.class,
         JwtTokenProvider.class,
         JwtAuthEntryPoint.class,
         JwtAccessDeniedHandler.class,
@@ -51,7 +53,7 @@ class SocialAuthControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @MockitoBean
     private AuthService authService;

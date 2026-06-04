@@ -25,6 +25,7 @@ import com.mocktalkback.global.auth.jwt.RefreshTokenService;
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -46,6 +47,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/auth/join")
+    @SecurityRequirements
     @Operation(summary = "회원가입", description = "로컬 계정 회원가입")
     @ApiResponses({
             @ApiResponse(
@@ -61,6 +63,7 @@ public class AuthController {
     }
 
     @PostMapping("/auth/login")
+    @SecurityRequirements
     @Operation(summary = "로그인", description = "아이디/비밀번호로 로그인하고 Access Token을 발급합니다.")
     @ApiResponses({
             @ApiResponse(
@@ -85,6 +88,7 @@ public class AuthController {
     }
     
     @PostMapping("/auth/refresh")
+    @SecurityRequirements
     @Operation(summary = "토큰 갱신", description = "Refresh 쿠키로 Access Token을 재발급합니다.")
     @ApiResponses({
             @ApiResponse(
@@ -157,6 +161,7 @@ public class AuthController {
     }
 
     @PostMapping("/auth/oauth2/callback")
+    @SecurityRequirements
     @Operation(summary = "OAuth2 코드 교환", description = "1회용 코드를 Access Token으로 교환합니다.")
     @ApiResponses({
             @ApiResponse(

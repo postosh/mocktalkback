@@ -17,15 +17,15 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import com.mocktalkback.support.MocktalkWebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.article.dto.ArticleCreateRequest;
 import com.mocktalkback.domain.article.dto.ArticleBoardResponse;
 import com.mocktalkback.domain.article.dto.ArticleBookmarkDeleteRequest;
@@ -51,7 +51,7 @@ import com.mocktalkback.domain.article.service.ArticleService;
 import com.mocktalkback.domain.board.type.BoardVisibility;
 import com.mocktalkback.domain.role.type.ContentVisibility;
 
-@WebMvcTest(controllers = ArticleController.class)
+@MocktalkWebMvcTest(controllers = ArticleController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = {
     "SERVER_PORT=0"
@@ -64,7 +64,7 @@ class ArticleControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @MockitoBean
     private ArticleService articleService;

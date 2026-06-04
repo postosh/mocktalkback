@@ -21,6 +21,7 @@ import com.mocktalkback.domain.board.dto.BoardResponse;
 import com.mocktalkback.domain.board.dto.BoardSubscribeItemResponse;
 import com.mocktalkback.domain.board.dto.BoardSubscribeStatusResponse;
 import com.mocktalkback.domain.board.dto.BoardUpdateRequest;
+import com.mocktalkback.domain.user.dto.MyBoardItemResponse;
 import com.mocktalkback.domain.board.entity.BoardEntity;
 import com.mocktalkback.domain.board.entity.BoardFileEntity;
 import com.mocktalkback.domain.board.entity.BoardMemberEntity;
@@ -69,6 +70,11 @@ public class BoardService {
         Sort.Order.desc("createdAt"),
         Sort.Order.desc("id")
     );
+    private static final Sort MY_BOARD_SORT = Sort.by(
+        Sort.Order.desc("board.createdAt"),
+        Sort.Order.desc("id")
+    );
+    private static final List<BoardRole> MY_BOARD_ROLES = List.of(BoardRole.OWNER, BoardRole.MODERATOR);
 
     private final BoardRepository boardRepository;
     private final BoardFileRepository boardFileRepository;
@@ -184,15 +190,32 @@ public class BoardService {
             .map(subscribe -> toSubscribeItemResponse(subscribe, boardImages.get(subscribe.getBoard().getId())))
             .toList();
 
-        return new PageResponse<>(
-            items,
-            pageResult.getNumber(),
-            pageResult.getSize(),
-            pageResult.getTotalElements(),
-            pageResult.getTotalPages(),
-            pageResult.hasNext(),
-            pageResult.hasPrevious()
+        return PageResponse.from(pageResult, items);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<MyBoardItemResponse> findMyBoards(int page, int size) {
+        int resolvedPage = pageNormalizer.normalizePage(page);
+        int resolvedSize = pageNormalizer.normalizeSize(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, MY_BOARD_SORT);
+
+        Long userId = currentUserService.getUserId();
+        Page<BoardMemberEntity> pageResult = boardMemberRepository.findAllByUserIdAndBoardRoleInAndBoard_DeletedAtIsNull(
+            userId,
+            MY_BOARD_ROLES,
+            pageable
         );
+
+        List<BoardMemberEntity> members = pageResult.getContent();
+        List<BoardEntity> boards = members.stream()
+            .map(BoardMemberEntity::getBoard)
+            .toList();
+        Map<Long, FileResponse> boardImages = resolveBoardImages(boards);
+        List<MyBoardItemResponse> items = members.stream()
+            .map(member -> toMyBoardItemResponse(member, boardImages.get(member.getBoard().getId())))
+            .toList();
+
+        return PageResponse.from(pageResult, items);
     }
 
     @Transactional
@@ -396,16 +419,7 @@ public class BoardService {
     }
 
     private PageResponse<BoardResponse> toPageResponse(Page<BoardEntity> page) {
-        List<BoardResponse> items = mapBoardResponses(page.getContent());
-        return new PageResponse<>(
-            items,
-            page.getNumber(),
-            page.getSize(),
-            page.getTotalElements(),
-            page.getTotalPages(),
-            page.hasNext(),
-            page.hasPrevious()
-        );
+        return PageResponse.from(page, mapBoardResponses(page.getContent()));
     }
 
     private BoardSubscribeItemResponse toSubscribeItemResponse(
@@ -422,6 +436,21 @@ public class BoardService {
             board.getVisibility(),
             boardImage,
             subscribe.getCreatedAt()
+        );
+    }
+
+    private MyBoardItemResponse toMyBoardItemResponse(BoardMemberEntity member, FileResponse boardImage) {
+        BoardEntity board = member.getBoard();
+        return new MyBoardItemResponse(
+            member.getId(),
+            board.getId(),
+            board.getBoardName(),
+            board.getSlug(),
+            board.getDescription(),
+            board.getVisibility(),
+            member.getBoardRole(),
+            boardImage,
+            member.getCreatedAt()
         );
     }
 

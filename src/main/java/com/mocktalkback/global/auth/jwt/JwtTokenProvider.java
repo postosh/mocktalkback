@@ -1,38 +1,39 @@
 package com.mocktalkback.global.auth.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.stereotype.Component;
 
 @Component
 public class JwtTokenProvider {
 
-    private final SecretKey key;
+    private final JwtEncoder jwtEncoder;
+    private final JwtDecoder jwtDecoder;
     private final String issuer;
     private final long accessTtlSec;
     private final long refreshTtlSec;
     private final long refreshAbsoluteTtlSec;
 
     public JwtTokenProvider(
-            @Value("${JWT_SECRET}") String secret,
+            JwtEncoder jwtEncoder,
+            @Qualifier("mocktalkJwtDecoder") JwtDecoder jwtDecoder,
             @Value("${JWT_ISSUER:mocktalk}") String issuer,
             @Value("${JWT_ACCESS_TTL_SECONDS:3600}") long accessTtlSec,
-            @Value("${JWT_REFRESH_TTL_SECONDS:1209600}") long refreshTtlSec,  // 14days default
-            @Value("${JWT_REFRESH_ABSOLUTE_TTL_SECONDS:2592000}") long refreshAbsoluteTtlSec  // 30days default
+            @Value("${JWT_REFRESH_TTL_SECONDS:1209600}") long refreshTtlSec,
+            @Value("${JWT_REFRESH_ABSOLUTE_TTL_SECONDS:2592000}") long refreshAbsoluteTtlSec
     ) {
-        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (secretBytes.length < 32) {
-            throw new IllegalArgumentException("JWT_SECRET must be at least 32 bytes for HS256.");
-        }
-        this.key = Keys.hmacShaKeyFor(secretBytes);
+        this.jwtEncoder = jwtEncoder;
+        this.jwtDecoder = jwtDecoder;
         this.issuer = issuer;
         this.accessTtlSec = accessTtlSec;
         this.refreshTtlSec = refreshTtlSec;
@@ -53,54 +54,47 @@ public class JwtTokenProvider {
 
     public String createAccessToken(Long userId, String roleName, int authBit) {
         Instant now = Instant.now();
-        Instant exp = now.plusSeconds(accessTtlSec);
-
-        return Jwts.builder()
+        JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(String.valueOf(userId))
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(accessTtlSec))
                 .claim("typ", "access")
                 .claim("role", roleName)
                 .claim("authBit", authBit)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(exp))
-                .signWith(key)
-                .compact();
-    }
-
-    public Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .requireIssuer(issuer)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .build();
+        return encode(claims);
     }
 
     public String createRefreshToken(Long userId, String sid, String jti, boolean rememberMe) {
         Instant now = Instant.now();
-        Instant exp = now.plusSeconds(refreshTtlSec);
-
-        return Jwts.builder()
+        JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(String.valueOf(userId))
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(refreshTtlSec))
+                .id(jti)
                 .claim("typ", "refresh")
                 .claim("sid", sid)
                 .claim("rm", rememberMe)
-                .id(jti)  // jti
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(exp))
-                .signWith(key)
-                .compact();
+                .build();
+        return encode(claims);
     }
 
-    public Claims parseRefreshClaims(String token) throws JwtException {
-        Claims c = parseClaims(token);  // 기존 parseClaims 재사용
-        Object typ = c.get("typ");
-        if (!"refresh".equals(typ)) {
-            throw new IllegalArgumentException("not refresh token");
+    public Jwt decode(String token) {
+        return jwtDecoder.decode(token);
+    }
+
+    public Jwt parseRefreshClaims(String token) throws JwtException {
+        Jwt jwt = jwtDecoder.decode(token);
+        if (!"refresh".equals(jwt.getClaimAsString("typ"))) {
+            throw new JwtException("not refresh token");
         }
-        return c;
+        return jwt;
     }
 
-
+    private String encode(JwtClaimsSet claims) {
+        JwsHeader headers = JwsHeader.with(MacAlgorithm.HS256).build();
+        return jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue();
+    }
 }

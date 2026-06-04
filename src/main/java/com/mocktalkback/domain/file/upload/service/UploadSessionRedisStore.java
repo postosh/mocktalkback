@@ -7,8 +7,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class UploadSessionRedisStore {
@@ -16,11 +16,11 @@ public class UploadSessionRedisStore {
     private static final String KEY_PREFIX = "upload:session:";
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public UploadSessionRedisStore(
         StringRedisTemplate stringRedisTemplate,
-        ObjectMapper objectMapper
+        JsonMapper objectMapper
     ) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
@@ -64,7 +64,7 @@ public class UploadSessionRedisStore {
     private String serialize(UploadSessionState state) {
         try {
             return objectMapper.writeValueAsString(state);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("업로드 세션 저장 직렬화에 실패했습니다.");
         }
     }
@@ -72,7 +72,7 @@ public class UploadSessionRedisStore {
     private UploadSessionState deserialize(String raw) {
         try {
             return objectMapper.readValue(raw, UploadSessionState.class);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("업로드 세션 역직렬화에 실패했습니다.");
         }
     }

@@ -9,8 +9,8 @@ import java.util.Set;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.realtime.config.RealtimeRedisProperties;
 import com.mocktalkback.domain.realtime.dto.NotificationPresenceUpdateRequest;
 import com.mocktalkback.domain.realtime.type.NotificationPresenceViewType;
@@ -24,7 +24,7 @@ public class NotificationPresenceRedisStore {
     private static final String PRESENCE_KEY_PREFIX = "presence:notification:";
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final RealtimeRedisProperties realtimeRedisProperties;
 
     public void upsert(Long userId, NotificationPresenceUpdateRequest request, Instant now) {
@@ -90,7 +90,7 @@ public class NotificationPresenceRedisStore {
     private String toJson(RedisPresenceState state) {
         try {
             return objectMapper.writeValueAsString(state);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("알림 presence 직렬화에 실패했습니다.", ex);
         }
     }
@@ -98,7 +98,7 @@ public class NotificationPresenceRedisStore {
     private RedisPresenceState fromJson(String value) {
         try {
             return objectMapper.readValue(value, RedisPresenceState.class);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("알림 presence 파싱에 실패했습니다.", ex);
         }
     }

@@ -22,6 +22,13 @@ public interface BoardMemberRepository extends JpaRepository<BoardMemberEntity, 
     @EntityGraph(attributePaths = {"user", "grantedByUser"})
     Page<BoardMemberEntity> findAllByBoardIdAndBoardRoleIn(Long boardId, Collection<BoardRole> boardRoles, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"board"})
+    Page<BoardMemberEntity> findAllByUserIdAndBoardRoleInAndBoard_DeletedAtIsNull(
+        Long userId,
+        Collection<BoardRole> boardRoles,
+        Pageable pageable
+    );
+
     List<BoardMemberEntity> findAllByUserId(Long userId);
 
     List<BoardMemberEntity> findAllByUserIdAndBoardIdIn(Long userId, Collection<Long> boardIds);

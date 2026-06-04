@@ -6,8 +6,8 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.newsbot.entity.NewsCollectionJobEntity;
 import com.mocktalkback.domain.newsbot.type.NewsSourceType;
 
@@ -18,9 +18,9 @@ public class NewsBotSourceFetchService {
     };
 
     private final Map<NewsSourceType, NewsSourceClient> clients;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    public NewsBotSourceFetchService(List<NewsSourceClient> clients, ObjectMapper objectMapper) {
+    public NewsBotSourceFetchService(List<NewsSourceClient> clients, JsonMapper objectMapper) {
         this.clients = new EnumMap<>(NewsSourceType.class);
         for (NewsSourceClient client : clients) {
             this.clients.put(client.supports(), client);

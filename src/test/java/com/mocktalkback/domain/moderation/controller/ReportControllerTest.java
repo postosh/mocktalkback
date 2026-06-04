@@ -10,15 +10,15 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import com.mocktalkback.support.MocktalkWebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.moderation.dto.ReportCreateRequest;
 import com.mocktalkback.domain.moderation.dto.ReportDetailResponse;
 import com.mocktalkback.domain.moderation.service.ModerationService;
@@ -26,7 +26,7 @@ import com.mocktalkback.domain.moderation.type.ReportReasonCode;
 import com.mocktalkback.domain.moderation.type.ReportStatus;
 import com.mocktalkback.domain.moderation.type.ReportTargetType;
 
-@WebMvcTest(controllers = ReportController.class)
+@MocktalkWebMvcTest(controllers = ReportController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = {
     "SERVER_PORT=0"
@@ -39,7 +39,7 @@ class ReportControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @MockitoBean
     private ModerationService moderationService;

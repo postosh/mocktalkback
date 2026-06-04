@@ -7,7 +7,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 import com.mocktalkback.global.common.dto.ApiError;
 import com.mocktalkback.global.common.dto.ErrorCode;
@@ -18,9 +18,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
-    public JwtAccessDeniedHandler(ObjectMapper objectMapper) {
+    public JwtAccessDeniedHandler(JsonMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

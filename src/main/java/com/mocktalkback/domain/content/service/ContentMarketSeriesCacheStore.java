@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.content.config.ContentMarketProperties;
 import com.mocktalkback.domain.content.dto.MarketSeriesResponse;
 import com.mocktalkback.domain.content.type.MarketInstrumentCode;
@@ -34,7 +34,7 @@ public class ContentMarketSeriesCacheStore {
     );
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final ContentMarketProperties contentMarketProperties;
 
     public Optional<MarketSeriesResponse> find(MarketInstrumentCode instrumentCode, MarketSeriesPeriod period) {
@@ -49,7 +49,7 @@ public class ContentMarketSeriesCacheStore {
 
         try {
             return Optional.of(objectMapper.readValue(raw, MarketSeriesResponse.class));
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             log.warn("시세 시계열 캐시 역직렬화에 실패해 캐시를 삭제합니다. instrument={}, period={}", instrumentCode, period, ex);
             stringRedisTemplate.delete(key(instrumentCode, period));
             return Optional.empty();
@@ -68,7 +68,7 @@ public class ContentMarketSeriesCacheStore {
                 raw,
                 Duration.ofSeconds(contentMarketProperties.getSeriesCacheTtlSeconds())
             );
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             log.warn("시세 시계열 캐시 직렬화에 실패해 저장을 건너뜁니다. instrument={}, period={}", response.instrumentCode(), response.period(), ex);
         }
     }

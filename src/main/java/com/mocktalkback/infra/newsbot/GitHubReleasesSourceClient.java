@@ -7,8 +7,8 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.newsbot.config.NewsBotProperties;
 import com.mocktalkback.domain.newsbot.service.NewsBotSourceItem;
 import com.mocktalkback.domain.newsbot.service.NewsSourceClient;
@@ -20,11 +20,11 @@ public class GitHubReleasesSourceClient extends AbstractNewsSourceClient impleme
     private static final String BASE_URL = "https://api.github.com";
 
     private final RestClient restClient;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public GitHubReleasesSourceClient(
         RestClient.Builder restClientBuilder,
-        ObjectMapper objectMapper,
+        JsonMapper objectMapper,
         NewsBotProperties newsBotProperties
     ) {
         super(newsBotProperties);
@@ -53,16 +53,16 @@ public class GitHubReleasesSourceClient extends AbstractNewsSourceClient impleme
                 .retrieve()
                 .body(String.class);
             JsonNode releaseNode = objectMapper.readTree(responseBody);
-            String releaseId = releaseNode.path("id").asText();
-            String title = releaseNode.path("name").asText(null);
+            String releaseId = releaseNode.path("id").asString();
+            String title = releaseNode.path("name").asString(null);
             if (title == null || title.isBlank()) {
-                title = releaseNode.path("tag_name").asText(null);
+                title = releaseNode.path("tag_name").asString(null);
             }
-            String url = releaseNode.path("html_url").asText(null);
+            String url = releaseNode.path("html_url").asString(null);
             if (title == null || title.isBlank() || url == null || url.isBlank()) {
                 return List.of();
             }
-            String summary = releaseNode.path("body").asText("");
+            String summary = releaseNode.path("body").asString("");
             if (summary.length() > 4000) {
                 summary = summary.substring(0, 4000);
             }
@@ -72,9 +72,9 @@ public class GitHubReleasesSourceClient extends AbstractNewsSourceClient impleme
                 url,
                 summary.trim(),
                 owner + "/" + repo,
-                releaseNode.path("author").path("login").asText(null),
-                parseInstant(releaseNode.path("published_at").asText(null)),
-                parseInstant(releaseNode.path("updated_at").asText(null))
+                releaseNode.path("author").path("login").asString(null),
+                parseInstant(releaseNode.path("published_at").asString(null)),
+                parseInstant(releaseNode.path("updated_at").asString(null))
             ));
         } catch (Exception exception) {
             throw new IllegalArgumentException("GitHub Release 데이터를 가져오지 못했습니다.", exception);
