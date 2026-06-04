@@ -5,6 +5,7 @@
 | 문서 | 대상 | 설명 |
 |------|------|------|
 | [frontend-api-i18n.md](./frontend-api-i18n.md) | **프론트엔드** | API 다국어(`Accept-Language`), 에러/검증 응답 처리 가이드 |
+| [frontend-media-view-tickets.md](./frontend-media-view-tickets.md) | **프론트엔드** | 보호 미디어 view-ticket 배치 API, 게시글 본문 연동 |
 
 ## API 스펙
 

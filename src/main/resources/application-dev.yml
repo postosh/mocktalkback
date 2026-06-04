@@ -159,6 +159,7 @@ app:
     presign-endpoint: ${OBJECT_STORAGE_PRESIGN_ENDPOINT:http://localhost:9000}
     presign-expire-seconds: ${OBJECT_STORAGE_PRESIGN_EXPIRE_SECONDS:300}
     protected-view-expire-seconds: ${OBJECT_STORAGE_PROTECTED_VIEW_EXPIRE_SECONDS:120}
+    view-ticket-batch-max-items: ${OBJECT_STORAGE_VIEW_TICKET_BATCH_MAX_ITEMS:100}
     upload-proxy-prefix: ${OBJECT_STORAGE_UPLOAD_PROXY_PREFIX:/storage}
   sanitize:
     allowed-file-origins: ${HTML_ALLOWED_FILE_ORIGINS:http://localhost:9000,http://localhost:8082}
