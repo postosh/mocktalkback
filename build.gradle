@@ -24,6 +24,8 @@ repositories {
 	mavenCentral()
 }
 
+def nativeAccessJvmArgs = ['--enable-native-access=ALL-UNNAMED']
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-restclient'
@@ -87,7 +89,6 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-jackson-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-	testImplementation 'org.springframework.security:spring-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -111,10 +112,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('bootRun') {
-	jvmArgs '--enable-native-access=ALL-UNNAMED'
+	jvmArgs nativeAccessJvmArgs
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
-	jvmArgs '--enable-native-access=ALL-UNNAMED'
+	jvmArgs nativeAccessJvmArgs
 }

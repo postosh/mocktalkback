@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.mocktalkback.domain.board.service.BoardService;
 import com.mocktalkback.domain.article.repository.ArticleRepository;
 import com.mocktalkback.domain.comment.repository.CommentRepository;
 import com.mocktalkback.domain.common.policy.PageNormalizer;
@@ -31,6 +32,7 @@ import com.mocktalkback.domain.user.dto.UserProfileUpdateRequest;
 import com.mocktalkback.domain.user.dto.UserDeleteRequest;
 import com.mocktalkback.domain.user.dto.UserMentionResponse;
 import com.mocktalkback.domain.user.dto.MyArticleItemResponse;
+import com.mocktalkback.domain.user.dto.MyBoardItemResponse;
 import com.mocktalkback.domain.user.dto.MyCommentItemResponse;
 import com.mocktalkback.domain.user.entity.UserEntity;
 import com.mocktalkback.domain.user.entity.UserFileEntity;
@@ -55,6 +57,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserFileRepository userFileRepository;
+    private final BoardService boardService;
     private final ArticleRepository articleRepository;
     private final CommentRepository commentRepository;
     private final FileRepository fileRepository;
@@ -133,6 +136,11 @@ public class UserService {
         Long userId = currentUserService.getUserId();
         UserEntity user = getUser(userId);
         user.softDeleteAccount();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<MyBoardItemResponse> getMyBoards(int page, int size) {
+        return boardService.findMyBoards(page, size);
     }
 
     @Transactional(readOnly = true)

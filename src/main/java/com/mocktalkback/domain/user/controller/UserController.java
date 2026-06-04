@@ -10,14 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mocktalkback.domain.user.dto.MyArticleItemResponse;
+import com.mocktalkback.domain.user.dto.MyBoardItemResponse;
+import com.mocktalkback.domain.user.dto.MyCommentItemResponse;
 import com.mocktalkback.domain.user.dto.UserDeleteRequest;
 import com.mocktalkback.domain.user.dto.UserMentionResponse;
 import com.mocktalkback.domain.user.dto.UserProfileResponse;
 import com.mocktalkback.domain.user.dto.UserProfileUpdateRequest;
-import com.mocktalkback.domain.board.service.BoardService;
-import com.mocktalkback.domain.user.dto.MyArticleItemResponse;
-import com.mocktalkback.domain.user.dto.MyBoardItemResponse;
-import com.mocktalkback.domain.user.dto.MyCommentItemResponse;
 import com.mocktalkback.domain.user.service.UserService;
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 import com.mocktalkback.global.common.dto.PageResponse;
@@ -39,7 +38,6 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService userService;
-    private final BoardService boardService;
 
     @GetMapping("/users/me")
     @Operation(summary = "내 프로필 조회", description = "로그인된 사용자 프로필을 조회합니다.")
@@ -103,7 +101,7 @@ public class UserController {
         @Parameter(description = "페이지 크기(최대 50)", example = "10")
         @RequestParam(name = "size", defaultValue = "10") int size
     ) {
-        return ApiEnvelope.ok(boardService.findMyBoards(page, size));
+        return ApiEnvelope.ok(userService.getMyBoards(page, size));
     }
 
     @GetMapping("/users/me/articles")

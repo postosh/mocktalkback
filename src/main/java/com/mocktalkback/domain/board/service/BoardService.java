@@ -190,15 +190,7 @@ public class BoardService {
             .map(subscribe -> toSubscribeItemResponse(subscribe, boardImages.get(subscribe.getBoard().getId())))
             .toList();
 
-        return new PageResponse<>(
-            items,
-            pageResult.getNumber(),
-            pageResult.getSize(),
-            pageResult.getTotalElements(),
-            pageResult.getTotalPages(),
-            pageResult.hasNext(),
-            pageResult.hasPrevious()
-        );
+        return PageResponse.from(pageResult, items);
     }
 
     @Transactional(readOnly = true)
@@ -223,15 +215,7 @@ public class BoardService {
             .map(member -> toMyBoardItemResponse(member, boardImages.get(member.getBoard().getId())))
             .toList();
 
-        return new PageResponse<>(
-            items,
-            pageResult.getNumber(),
-            pageResult.getSize(),
-            pageResult.getTotalElements(),
-            pageResult.getTotalPages(),
-            pageResult.hasNext(),
-            pageResult.hasPrevious()
-        );
+        return PageResponse.from(pageResult, items);
     }
 
     @Transactional
@@ -435,16 +419,7 @@ public class BoardService {
     }
 
     private PageResponse<BoardResponse> toPageResponse(Page<BoardEntity> page) {
-        List<BoardResponse> items = mapBoardResponses(page.getContent());
-        return new PageResponse<>(
-            items,
-            page.getNumber(),
-            page.getSize(),
-            page.getTotalElements(),
-            page.getTotalPages(),
-            page.hasNext(),
-            page.hasPrevious()
-        );
+        return PageResponse.from(page, mapBoardResponses(page.getContent()));
     }
 
     private BoardSubscribeItemResponse toSubscribeItemResponse(
