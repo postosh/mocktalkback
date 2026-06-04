@@ -1,7 +1,7 @@
 services:
   # OCI 서버는 GHCR 이미지를 pull 해서 백엔드만 배포한다.
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/ohseonghyeon/mocktalkback:prod-latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/postosh/mocktalkback:prod-latest}
     pull_policy: always
     container_name: mocktalk-back
     env_file:

@@ -21,6 +21,8 @@ jobs:
   deploy:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/mocktalkback
     steps:
       - name: SSH 키 로드
         env:
@@ -50,7 +52,7 @@ jobs:
           OCI_DEPLOY_PATH: ${{ secrets.OCI_DEPLOY_PATH }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          BACKEND_IMAGE: ghcr.io/ohseonghyeon/mocktalkback:prod-latest
+          BACKEND_IMAGE: ${{ env.IMAGE_NAME }}:prod-latest
         run: |
           set -euo pipefail
           SSH_PORT="${OCI_SSH_PORT:-22}"
@@ -148,4 +150,4 @@ jobs:
 
       - name: 배포 완료 요약
         run: |
-          echo "OCI 백엔드 배포 완료: ghcr.io/ohseonghyeon/mocktalkback:prod-latest" >> "$GITHUB_STEP_SUMMARY"
+          echo "OCI 백엔드 배포 완료: ${{ env.IMAGE_NAME }}:prod-latest" >> "$GITHUB_STEP_SUMMARY"
