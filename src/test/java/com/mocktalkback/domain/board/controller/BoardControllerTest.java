@@ -37,6 +37,8 @@ import com.mocktalkback.domain.board.dto.BoardSubscribeItemResponse;
 import com.mocktalkback.domain.board.dto.BoardSubscribeStatusResponse;
 import com.mocktalkback.domain.board.dto.BoardUpdateRequest;
 import com.mocktalkback.domain.board.service.BoardService;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import com.mocktalkback.domain.board.type.BoardArticleWritePolicy;
 import com.mocktalkback.domain.board.type.BoardRole;
 import com.mocktalkback.domain.board.type.BoardVisibility;
@@ -415,7 +417,7 @@ class BoardControllerTest {
     void findArticles_with_categoryId_and_uncategorized_returns_bad_request() throws Exception {
         // Given: 동시 필터 사용 예외
         when(articleService.getBoardArticles(10L, 0, 10, SortOrder.LATEST, 3L, true))
-            .thenThrow(new IllegalArgumentException("categoryId와 uncategorized=true를 동시에 사용할 수 없습니다."));
+            .thenThrow(new ApiException(ErrorCode.ARTICLE_CATEGORY_FILTER_CONFLICT));
 
         // When: 동시 필터로 API 호출
         ResultActions result = mockMvc.perform(get("/api/boards/10/articles")

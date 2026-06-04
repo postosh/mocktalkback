@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.newsbot;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +46,7 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
         String tag = optionalString(sourceConfig, "tag");
         String username = optionalString(sourceConfig, "username");
         if (tag == null && username == null) {
-            throw new IllegalArgumentException("DEV API는 tag 또는 username 중 하나가 필요합니다.");
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_UNSUPPORTED);
         }
     }
 
@@ -80,7 +82,7 @@ public class DevToSourceClient extends AbstractNewsSourceClient implements NewsS
             }
             return items;
         } catch (Exception exception) {
-            throw new IllegalArgumentException("DEV 새소식을 가져오지 못했습니다.", exception);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_READ_FAILED);
         }
     }
 

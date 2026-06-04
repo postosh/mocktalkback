@@ -9,11 +9,11 @@ import jakarta.validation.constraints.NotNull;
 @Schema(description = "알림 presence 업데이트 요청")
 public record NotificationPresenceUpdateRequest(
     @Schema(description = "브라우저 탭 단위 세션 아이디", example = "2db40ef2-2b49-4ef0-a53f-30fddf0f4d8a")
-    @NotBlank(message = "sessionId는 필수입니다.")
+    @NotBlank(message = "{validation.sessionId.required}")
     String sessionId,
 
     @Schema(description = "현재 화면 유형", example = "ARTICLE_DETAIL")
-    @NotNull(message = "viewType은 필수입니다.")
+    @NotNull(message = "{validation.viewType.required}")
     NotificationPresenceViewType viewType,
 
     @Schema(description = "현재 조회 중인 게시글 아이디", example = "101")

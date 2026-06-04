@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -35,7 +37,7 @@ public class ArticleCategoryService {
     @Transactional(readOnly = true)
     public ArticleCategoryResponse findById(Long id) {
         ArticleCategoryEntity entity = articleCategoryRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("article category not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
         return articleMapper.toResponse(entity);
     }
 
@@ -49,7 +51,7 @@ public class ArticleCategoryService {
     @Transactional
     public ArticleCategoryResponse update(Long id, ArticleCategoryUpdateRequest request) {
         ArticleCategoryEntity entity = articleCategoryRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("article category not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
         entity.updateName(request.categoryName());
         return articleMapper.toResponse(entity);
     }
@@ -61,6 +63,6 @@ public class ArticleCategoryService {
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findById(boardId)
-            .orElseThrow(() -> new IllegalArgumentException("board not found: " + boardId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 }

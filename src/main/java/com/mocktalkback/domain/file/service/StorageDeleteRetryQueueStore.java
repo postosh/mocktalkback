@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +47,7 @@ public class StorageDeleteRetryQueueStore {
 
     public void upsertRetryJob(StorageDeleteRetryJob job) {
         if (job == null || !StringUtils.hasText(job.jobId())) {
-            throw new IllegalArgumentException("삭제 재시도 작업 정보가 비어있습니다.");
+            throw new ApiException(ErrorCode.DELETE_RETRY_EMPTY);
         }
         String serialized = serialize(job);
         stringRedisTemplate.opsForValue().set(retryJobKey(job.jobId()), serialized);

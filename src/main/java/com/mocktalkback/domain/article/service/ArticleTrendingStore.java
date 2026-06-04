@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -41,7 +43,7 @@ public class ArticleTrendingStore {
 
     private String member(Long articleId) {
         if (articleId == null) {
-            throw new IllegalArgumentException("게시글 ID가 비어 있습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_ID_EMPTY);
         }
         return String.valueOf(articleId);
     }

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.moderation.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -9,10 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.article.entity.ArticleEntity;
 import com.mocktalkback.domain.article.repository.ArticleRepository;
@@ -168,28 +168,28 @@ public class BoardContentAdminService {
 
     private ArticleEntity getArticle(Long articleId) {
         return articleRepository.findById(articleId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
     }
 
     private CommentEntity getComment(Long commentId) {
         return commentRepository.findById(commentId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
         Long userId = currentUserService.getUserId();
         return userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private void ensureSameBoard(Long boardId, BoardEntity board) {
         if (!board.getId().equals(boardId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "게시판 콘텐츠가 아닙니다.");
+            throw new ApiException(ErrorCode.BOARD_CONTENT_INVALID);
         }
     }
 

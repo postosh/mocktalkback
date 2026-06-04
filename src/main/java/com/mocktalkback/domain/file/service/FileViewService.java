@@ -1,12 +1,12 @@
 package com.mocktalkback.domain.file.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.file.entity.FileEntity;
 import com.mocktalkback.domain.file.entity.FileVariantEntity;
@@ -32,11 +32,11 @@ public class FileViewService {
 
     public String resolveViewLocation(Long fileId, String variantParam, String ticket) {
         FileEntity file = fileRepository.findByIdAndDeletedAtIsNull(fileId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
 
         FileDeliveryMode deliveryMode = fileAccessDecisionService.resolveDeliveryMode(file);
         if (deliveryMode == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다.");
+            throw new ApiException(ErrorCode.FILE_NOT_FOUND);
         }
 
         Duration ticketRemainingTtl = null;
@@ -68,7 +68,7 @@ public class FileViewService {
         try {
             return FileVariantCode.valueOf(normalized.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 변환본 코드입니다.");
+            throw new ApiException(ErrorCode.FILE_VARIANT_UNSUPPORTED);
         }
     }
 

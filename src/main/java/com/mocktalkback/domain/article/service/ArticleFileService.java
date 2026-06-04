@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class ArticleFileService {
     @Transactional(readOnly = true)
     public ArticleFileResponse findById(Long id) {
         ArticleFileEntity entity = articleFileRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("article file not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_FILE_LINK_NOT_FOUND));
         return articleMapper.toResponse(entity);
     }
 
@@ -56,11 +58,11 @@ public class ArticleFileService {
 
     private FileEntity getFile(Long fileId) {
         return fileRepository.findById(fileId)
-            .orElseThrow(() -> new IllegalArgumentException("file not found: " + fileId));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
     }
 
     private ArticleEntity getArticle(Long articleId) {
         return articleRepository.findById(articleId)
-            .orElseThrow(() -> new IllegalArgumentException("article not found: " + articleId));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
     }
 }

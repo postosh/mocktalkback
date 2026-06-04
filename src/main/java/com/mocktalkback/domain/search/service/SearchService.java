@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.search.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -8,11 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.article.entity.ArticleEntity;
 import com.mocktalkback.domain.article.entity.QArticleEntity;
@@ -636,13 +636,13 @@ public class SearchService {
 
     private SearchUserContext loadUserContext(Long userId) {
         UserEntity user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "user not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
         return new SearchUserContext(userId, roleEvaluator.isManagerOrAdmin(user));
     }
 
     private String normalizeKeyword(String keyword) {
         if (!StringUtils.hasText(keyword)) {
-            throw new IllegalArgumentException("검색어를 입력해주세요.");
+            throw new ApiException(ErrorCode.SEARCH_KEYWORD_REQUIRED);
         }
         return keyword.trim();
     }

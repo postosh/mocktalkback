@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
+import com.mocktalkback.global.i18n.ApiException;
 
 import com.mocktalkback.domain.user.dto.AccessTokenResult;
 import com.mocktalkback.domain.user.dto.AuthTokens;
@@ -127,7 +127,7 @@ public class AuthController {
                     .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                     .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
                     .body(new TokenResponse(tokens.accessToken(), "Bearer", tokens.accessExpiresInSec()));
-        } catch (ResponseStatusException e) {
+        } catch (ApiException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .header(HttpHeaders.SET_COOKIE, cookieUtil.clear().toString())
                     .header(HttpHeaders.SET_COOKIE, cookieUtil.clearLogout().toString())
@@ -151,7 +151,7 @@ public class AuthController {
         if (refreshToken != null && !refreshToken.isBlank()) {
             try {
                 refreshTokenService.revoke(refreshToken);
-            } catch (ResponseStatusException ignored) {
+            } catch (ApiException ignored) {
             }
         }
         return ResponseEntity.noContent()

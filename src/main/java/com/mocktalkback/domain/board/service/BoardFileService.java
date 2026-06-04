@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.board.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class BoardFileService {
     @Transactional(readOnly = true)
     public BoardFileResponse findById(Long id) {
         BoardFileEntity entity = boardFileRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("board file not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_FILE_NOT_FOUND));
         return boardMapper.toResponse(entity);
     }
 
@@ -56,11 +58,11 @@ public class BoardFileService {
 
     private FileEntity getFile(Long fileId) {
         return fileRepository.findById(fileId)
-            .orElseThrow(() -> new IllegalArgumentException("file not found: " + fileId));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findById(boardId)
-            .orElseThrow(() -> new IllegalArgumentException("board not found: " + boardId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 }

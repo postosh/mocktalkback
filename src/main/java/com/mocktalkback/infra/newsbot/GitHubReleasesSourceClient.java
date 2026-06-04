@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.newsbot;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +79,7 @@ public class GitHubReleasesSourceClient extends AbstractNewsSourceClient impleme
                 parseInstant(releaseNode.path("updated_at").asString(null))
             ));
         } catch (Exception exception) {
-            throw new IllegalArgumentException("GitHub Release 데이터를 가져오지 못했습니다.", exception);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_READ_FAILED);
         }
     }
 

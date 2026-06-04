@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.newsbot.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -85,7 +87,7 @@ public class AdminNewsBotService {
         UserEntity author = getSystemAuthor();
         validateRequest(request);
         if (newsCollectionJobRepository.existsByJobName(request.jobName().trim())) {
-            throw new IllegalArgumentException("이미 같은 이름의 뉴스봇 잡이 있습니다.");
+            throw new ApiException(ErrorCode.NEWSBOT_JOB_NAME_DUPLICATE);
         }
 
         Instant now = clock.instant();
@@ -116,11 +118,11 @@ public class AdminNewsBotService {
         validateRequest(request);
 
         NewsCollectionJobEntity job = newsCollectionJobRepository.findById(jobId)
-            .orElseThrow(() -> new IllegalArgumentException("뉴스봇 잡을 찾을 수 없습니다: " + jobId));
+            .orElseThrow(() -> new ApiException(ErrorCode.NEWSBOT_JOB_NOT_FOUND));
 
         String newJobName = request.jobName().trim();
         if (!job.getJobName().equals(newJobName) && newsCollectionJobRepository.existsByJobName(newJobName)) {
-            throw new IllegalArgumentException("이미 같은 이름의 뉴스봇 잡이 있습니다.");
+            throw new ApiException(ErrorCode.NEWSBOT_JOB_NAME_DUPLICATE);
         }
 
         job.updateJob(
@@ -146,7 +148,7 @@ public class AdminNewsBotService {
     public AdminNewsBotJobResponse changeEnabled(Long jobId, AdminNewsBotJobToggleRequest request) {
         UserEntity actor = getActor();
         NewsCollectionJobEntity job = newsCollectionJobRepository.findById(jobId)
-            .orElseThrow(() -> new IllegalArgumentException("뉴스봇 잡을 찾을 수 없습니다: " + jobId));
+            .orElseThrow(() -> new ApiException(ErrorCode.NEWSBOT_JOB_NOT_FOUND));
 
         job.changeEnabled(request.enabled(), actor);
         if (request.enabled()) {
@@ -166,14 +168,14 @@ public class AdminNewsBotService {
         String resolvedTimezone = resolveTimezone(request.timezone());
         ZoneId.of(resolvedTimezone);
         if (request.autoCreateBoard() && !StringUtils.hasText(request.targetBoardName())) {
-            throw new IllegalArgumentException("게시판 자동 생성을 사용하려면 대상 게시판 이름이 필요합니다.");
+            throw new ApiException(ErrorCode.NEWSBOT_TARGET_BOARD_NAME_REQUIRED);
         }
     }
 
     private UserEntity getActor() {
         Long userId = currentUserService.getUserId();
         return userRepository.findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow(() -> new IllegalArgumentException("관리자 사용자를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private UserEntity getSystemAuthor() {

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +40,7 @@ public class ArticleImportBundleParser {
 
     public ArticleImportBundle parse(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("zip 파일이 비어 있습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_ZIP_EMPTY);
         }
 
         Map<String, byte[]> zipEntries = readZipEntries(file);
@@ -57,7 +59,7 @@ public class ArticleImportBundleParser {
         Map<String, Object> defaults = getMap(manifest, "defaults");
         List<?> articles = getList(manifest.get("articles"), "manifest articles는 배열이어야 합니다.");
         if (articles.isEmpty()) {
-            throw new IllegalArgumentException("manifest에 articles 항목이 없습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_MANIFEST_ARTICLES);
         }
 
         String manifestDirectory = extractDirectory(manifestPath);
@@ -130,7 +132,7 @@ public class ArticleImportBundleParser {
             .sorted()
             .toList();
         if (markdownPaths.isEmpty()) {
-            throw new IllegalArgumentException("zip 안에 import할 markdown 파일이 없습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_NO_MARKDOWN);
         }
 
         List<ArticleImportCandidate> candidates = new ArrayList<>();
@@ -219,7 +221,7 @@ public class ArticleImportBundleParser {
                 entries.put(normalizedPath, readEntry(zipInputStream));
             }
         } catch (IOException exception) {
-            throw new IllegalArgumentException("zip 파일을 읽을 수 없습니다.", exception);
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_ZIP_READ_FAILED);
         }
         return entries;
     }
@@ -284,7 +286,7 @@ public class ArticleImportBundleParser {
             return null;
         }
         if (candidates.size() > 1) {
-            throw new IllegalArgumentException("manifest 파일은 하나만 허용됩니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_MANIFEST_SINGLE);
         }
         return candidates.get(0);
     }
@@ -369,12 +371,12 @@ public class ArticleImportBundleParser {
         if (value instanceof List<?> list) {
             return list;
         }
-        throw new IllegalArgumentException(message);
+        throw new ApiException(ErrorCode.ARTICLE_IMPORT_VALIDATION_FAILED, message);
     }
 
     private Map<String, Object> asMap(Object value, String message) {
         if (!(value instanceof Map<?, ?> rawMap)) {
-            throw new IllegalArgumentException(message);
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_VALIDATION_FAILED, message);
         }
         return castMap(rawMap);
     }
@@ -468,7 +470,7 @@ public class ArticleImportBundleParser {
             }
             if ("..".equals(segment)) {
                 if (segments.isEmpty()) {
-                    throw new IllegalArgumentException("zip 경로가 올바르지 않습니다: " + rawPath);
+                    throw new ApiException(ErrorCode.ARTICLE_IMPORT_ZIP_PATH_INVALID, rawPath);
                 }
                 segments.removeLast();
                 continue;

@@ -5,6 +5,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -32,7 +35,7 @@ public class ArticleSyncVersionService {
         });
 
         if (nextSyncVersion == null) {
-            throw new IllegalArgumentException("article not found: " + articleId);
+            throw new ApiException(ErrorCode.ARTICLE_NOT_FOUND);
         }
         return nextSyncVersion;
     }

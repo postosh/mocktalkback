@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -48,10 +50,10 @@ public class ArticleContentService {
 
     public RenderedContent render(String contentSource, ArticleContentFormat contentFormat) {
         if (contentFormat == null) {
-            throw new IllegalArgumentException("contentFormat은 필수입니다.");
+            throw new ApiException(ErrorCode.ARTICLE_CONTENT_FORMAT_REQUIRED);
         }
         if (contentSource == null) {
-            throw new IllegalArgumentException("contentSource는 필수입니다.");
+            throw new ApiException(ErrorCode.ARTICLE_CONTENT_SOURCE_REQUIRED);
         }
 
         if (contentFormat == ArticleContentFormat.HTML) {

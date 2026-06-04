@@ -1,11 +1,11 @@
 package com.mocktalkback.domain.moderation.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.board.dto.BoardResponse;
 import com.mocktalkback.domain.board.entity.BoardEntity;
@@ -122,13 +122,13 @@ public class BoardSettingsAdminService {
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
         Long userId = currentUserService.getUserId();
         return userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private FileResponse resolveBoardImage(Long boardId) {

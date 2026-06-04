@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
 import com.mocktalkback.domain.content.type.MarketInstrumentCode;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 class MarketSnapshotImportServiceTest {
 
@@ -101,8 +103,9 @@ class MarketSnapshotImportServiceTest {
 
         // When & Then: 지원하지 않는 파일 형식이면 예외가 발생해야 한다.
         assertThatThrownBy(() -> service.parse(file, null))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("지원하지 않는 파일 형식");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.MARKET_IMPORT_FORMAT_UNSUPPORTED);
     }
 
     private byte[] createXlsx(String[] headerValues, String[] bodyValues) throws Exception {

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.board.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class BoardSubscribeService {
     @Transactional(readOnly = true)
     public BoardSubscribeResponse findById(Long id) {
         BoardSubscribeEntity entity = boardSubscribeRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("board subscribe not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_SUBSCRIBE_NOT_FOUND));
         return boardMapper.toResponse(entity);
     }
 
@@ -56,11 +58,11 @@ public class BoardSubscribeService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findById(boardId)
-            .orElseThrow(() -> new IllegalArgumentException("board not found: " + boardId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 }

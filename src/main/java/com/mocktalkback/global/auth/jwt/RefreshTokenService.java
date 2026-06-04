@@ -9,14 +9,13 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
 @Service
 public class RefreshTokenService {
 
@@ -64,7 +63,7 @@ public class RefreshTokenService {
         boolean rememberMe = resolveRememberMe(token);
 
         if (sid == null || jti == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
+            throw new ApiException(ErrorCode.AUTH_REFRESH_INVALID);
         }
 
         String newJti = UUID.randomUUID().toString();
@@ -80,10 +79,10 @@ public class RefreshTokenService {
         );
 
         if (result == null || result == 0L) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
+            throw new ApiException(ErrorCode.AUTH_REFRESH_INVALID);
         }
         if (result < 0) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_EXPIRED");
+            throw new ApiException(ErrorCode.AUTH_REFRESH_EXPIRED);
         }
 
         String newRefresh = jwt.createRefreshToken(userId, sid, newJti, rememberMe);
@@ -117,11 +116,11 @@ public class RefreshTokenService {
             return jwt.parseRefreshClaims(token);
         } catch (JwtException e) {
             if (isExpiredJwt(e)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_EXPIRED");
+                throw new ApiException(ErrorCode.AUTH_REFRESH_EXPIRED);
             }
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
+            throw new ApiException(ErrorCode.AUTH_REFRESH_INVALID);
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "REFRESH_INVALID");
+            throw new ApiException(ErrorCode.AUTH_REFRESH_INVALID);
         }
     }
 

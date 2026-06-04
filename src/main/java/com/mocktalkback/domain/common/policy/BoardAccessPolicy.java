@@ -46,7 +46,7 @@ public class BoardAccessPolicy {
             return;
         }
         if (member != null && member.getBoardRole() == BoardRole.PENDING) {
-            throw new AccessDeniedException("가입 승인 후 글쓰기가 가능합니다.");
+            throw new AccessDeniedException("Access Denied");
         }
 
         BoardArticleWritePolicy policy = board.getArticleWritePolicy();
@@ -64,7 +64,7 @@ public class BoardAccessPolicy {
         if (policy == BoardArticleWritePolicy.OWNER && role == BoardRole.OWNER) {
             return;
         }
-        throw new AccessDeniedException("게시글 작성 권한이 없습니다.");
+        throw new AccessDeniedException("Access Denied");
     }
 
     public EnumSet<ContentVisibility> resolveAllowedVisibilities(
@@ -101,25 +101,25 @@ public class BoardAccessPolicy {
         return allowed;
     }
 
-    public void requireManagePermission(UserEntity user, BoardMemberEntity member, String message) {
+    public void requireManagePermission(UserEntity user, BoardMemberEntity member) {
         if (roleEvaluator.isManagerOrAdmin(user)) {
             return;
         }
         if (member == null || member.getBoardRole() != BoardRole.OWNER) {
-            throw new AccessDeniedException(message);
+            throw new AccessDeniedException("Access Denied");
         }
     }
 
-    public void requireApprovePermission(UserEntity user, BoardMemberEntity member, String message) {
+    public void requireApprovePermission(UserEntity user, BoardMemberEntity member) {
         if (roleEvaluator.isManagerOrAdmin(user)) {
             return;
         }
         if (member == null) {
-            throw new AccessDeniedException(message);
+            throw new AccessDeniedException("Access Denied");
         }
         BoardRole role = member.getBoardRole();
         if (role != BoardRole.OWNER && role != BoardRole.MODERATOR) {
-            throw new AccessDeniedException(message);
+            throw new AccessDeniedException("Access Denied");
         }
     }
 

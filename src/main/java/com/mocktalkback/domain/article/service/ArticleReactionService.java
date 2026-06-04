@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class ArticleReactionService {
     @Transactional(readOnly = true)
     public ArticleReactionResponse findById(Long id) {
         ArticleReactionEntity entity = articleReactionRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("article reaction not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_REACTION_NOT_FOUND));
         return articleMapper.toResponse(entity);
     }
 
@@ -56,11 +58,11 @@ public class ArticleReactionService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private ArticleEntity getArticle(Long articleId) {
         return articleRepository.findById(articleId)
-            .orElseThrow(() -> new IllegalArgumentException("article not found: " + articleId));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
     }
 }

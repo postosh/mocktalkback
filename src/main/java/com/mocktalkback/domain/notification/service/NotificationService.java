@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.notification.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import com.mocktalkback.domain.notification.dto.NotificationResponse;
 import com.mocktalkback.domain.notification.entity.NotificationEntity;
@@ -112,7 +112,7 @@ public class NotificationService {
     public NotificationResponse findById(Long id) {
         Long userId = currentUserService.getUserId();
         NotificationEntity entity = notificationRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "notification not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.NOTIFICATION_NOT_FOUND));
         ArticleTitleBundle titles = resolveArticleTitles(List.of(entity));
         String articleTitle = resolveArticleTitle(entity, titles);
         return toResponse(entity, articleTitle);
@@ -140,7 +140,7 @@ public class NotificationService {
     public NotificationResponse markRead(Long id) {
         Long userId = currentUserService.getUserId();
         NotificationEntity entity = notificationRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "notification not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.NOTIFICATION_NOT_FOUND));
         if (!entity.isRead()) {
             entity.updateRead(true);
             publishUnreadCountChangedAfterCommit(userId, null);
@@ -171,7 +171,7 @@ public class NotificationService {
     public void delete(Long id) {
         Long userId = currentUserService.getUserId();
         NotificationEntity entity = notificationRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "notification not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.NOTIFICATION_NOT_FOUND));
         boolean unread = !entity.isRead();
         notificationRepository.delete(entity);
         if (unread) {
@@ -260,7 +260,7 @@ public class NotificationService {
 
     private String normalizeRedirectUrl(String redirectUrl) {
         if (redirectUrl == null || redirectUrl.trim().isEmpty()) {
-            throw new IllegalArgumentException("redirectUrl을 입력해주세요.");
+            throw new ApiException(ErrorCode.NOTIFICATION_REDIRECT_REQUIRED);
         }
         return redirectUrl.trim();
     }

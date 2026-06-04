@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -14,11 +16,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.HtmlUtils;
 
 import com.mocktalkback.domain.article.dto.ArticleBoardResponse;
@@ -130,7 +130,7 @@ public class ArticleService {
     public ArticleResponse create(ArticleCreateRequest request) {
         Long actorUserId = currentUserService.getUserId();
         if (actorUserId == null || !actorUserId.equals(request.userId())) {
-            throw new AccessDeniedException("요청 사용자 정보가 인증 사용자와 일치하지 않습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
 
         BoardEntity board = getBoard(request.boardId());
@@ -138,10 +138,10 @@ public class ArticleService {
         BoardMemberEntity member = boardMemberRepository.findByUserIdAndBoardId(actorUserId, board.getId())
             .orElse(null);
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
         boardAccessPolicy.requireCanWrite(board, user, member);
-        sanctionGuard.requireNotSanctioned(user, board, "제재 상태라 게시글을 작성할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, board);
         ArticleCategoryEntity category = getCategoryForBoard(request.categoryId(), board);
         ArticleContentService.RenderedContent renderedContent = articleContentService.render(
             request.contentSource(),
@@ -177,7 +177,7 @@ public class ArticleService {
     @Transactional
     public ArticleDetailResponse findDetailById(Long id, String clientIp, String userAgent) {
         ArticleEntity article = articleRepository.findByIdAndDeletedAtIsNull(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
 
         BoardEntity board = article.getBoard();
         Long userId = currentUserService.getOptionalUserId().orElse(null);
@@ -187,12 +187,12 @@ public class ArticleService {
             : boardMemberRepository.findByUserIdAndBoardId(userId, board.getId()).orElse(null);
 
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         EnumSet<ContentVisibility> allowed = boardAccessPolicy.resolveAllowedVisibilities(board, user, member);
         if (!allowed.contains(article.getVisibility())) {
-            throw new AccessDeniedException("게시글 조회 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
 
         long hit = articleViewService.increaseHitIfEligible(article.getId(), article.getHit(), clientIp, userAgent);
@@ -236,10 +236,10 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public ArticleEditorDetailResponse findEditorDetailById(Long id) {
         ArticleEntity article = articleRepository.findByIdAndDeletedAtIsNull(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
 
         UserEntity user = getCurrentUser();
-        sanctionGuard.requireNotSanctioned(user, article.getBoard(), "제재 상태라 게시글을 수정할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, article.getBoard());
         requireOwnership(user, article);
 
         BoardEntity board = article.getBoard();
@@ -287,7 +287,7 @@ public class ArticleService {
     public ArticleBookmarkStatusResponse bookmark(Long articleId) {
         UserEntity user = getCurrentUser();
         ArticleEntity article = getArticleForReaction(articleId, user);
-        sanctionGuard.requireNotSanctioned(user, article.getBoard(), "제재 상태라 북마크를 변경할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, article.getBoard());
 
         if (articleBookmarkRepository.existsByUserIdAndArticleId(user.getId(), article.getId())) {
             return new ArticleBookmarkStatusResponse(article.getId(), true);
@@ -306,7 +306,7 @@ public class ArticleService {
     public ArticleBookmarkStatusResponse unbookmark(Long articleId) {
         UserEntity user = getCurrentUser();
         ArticleEntity article = getArticleForReaction(articleId, user);
-        sanctionGuard.requireNotSanctioned(user, article.getBoard(), "제재 상태라 북마크를 변경할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, article.getBoard());
         if (!articleBookmarkRepository.existsByUserIdAndArticleId(user.getId(), articleId)) {
             return new ArticleBookmarkStatusResponse(articleId, false);
         }
@@ -318,17 +318,17 @@ public class ArticleService {
     @Transactional
     public ArticleReactionSummaryResponse toggleReaction(Long articleId, ArticleReactionToggleRequest request) {
         if (request.reactionType() == null) {
-            throw new IllegalArgumentException("reactionType은 필수입니다.");
+            throw new ApiException(ErrorCode.REACTION_TYPE_REQUIRED);
         }
         short reactionType = request.reactionType();
         ReactionTypeValidator.validate(reactionType);
         if (reactionType == 0) {
-            throw new IllegalArgumentException("reactionType은 -1 또는 1만 허용됩니다.");
+            throw new ApiException(ErrorCode.REACTION_TYPE_INVALID);
         }
 
         UserEntity user = getCurrentUser();
         ArticleEntity article = getArticleForReaction(articleId, user);
-        sanctionGuard.requireNotSanctioned(user, article.getBoard(), "제재 상태라 게시글에 반응할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, article.getBoard());
         short previousReaction = resolveMyReaction(article.getId(), user);
 
         short myReaction = articleReactionRepository.upsertToggleReaction(
@@ -406,7 +406,7 @@ public class ArticleService {
             : boardMemberRepository.findByUserIdAndBoardId(userId, boardId).orElse(null);
 
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         return articleCategoryRepository.findAllByBoardIdOrderByCategoryNameAsc(boardId).stream()
@@ -429,7 +429,7 @@ public class ArticleService {
         Pageable pageable = PageRequest.of(resolvedPage, resolvedSize, sort);
 
         if (categoryId != null && uncategorized) {
-            throw new IllegalArgumentException("categoryId와 uncategorized=true를 동시에 사용할 수 없습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_CATEGORY_FILTER_CONFLICT);
         }
 
         BoardEntity board = getBoardForRead(boardId);
@@ -440,12 +440,12 @@ public class ArticleService {
             : boardMemberRepository.findByUserIdAndBoardId(userId, boardId).orElse(null);
 
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         EnumSet<ContentVisibility> visibilities = boardAccessPolicy.resolveAllowedVisibilities(board, user, member);
         if (visibilities.isEmpty()) {
-            throw new AccessDeniedException("게시글 조회 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
 
         ArticleCategoryEntity category = getCategoryForBoard(categoryId, board);
@@ -502,9 +502,9 @@ public class ArticleService {
     @Transactional
     public ArticleResponse update(Long id, ArticleUpdateRequest request) {
         ArticleEntity entity = articleRepository.findByIdAndDeletedAtIsNull(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
         UserEntity user = getCurrentUser();
-        sanctionGuard.requireNotSanctioned(user, entity.getBoard(), "제재 상태라 게시글을 수정할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, entity.getBoard());
         requireOwnership(user, entity);
         ArticleCategoryEntity category = getCategoryForBoard(request.categoryId(), entity.getBoard());
         ArticleContentService.RenderedContent renderedContent = articleContentService.render(
@@ -527,9 +527,9 @@ public class ArticleService {
     @Transactional
     public void delete(Long id) {
         ArticleEntity entity = articleRepository.findByIdAndDeletedAtIsNull(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
         UserEntity user = getCurrentUser();
-        sanctionGuard.requireNotSanctioned(user, entity.getBoard(), "제재 상태라 게시글을 삭제할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, entity.getBoard());
         requireOwnership(user, entity);
         if (!entity.isDeleted()) {
             entity.softDelete();
@@ -543,7 +543,7 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public String resolveAttachmentDownloadLocation(Long articleId, Long fileId) {
         ArticleEntity article = articleRepository.findByIdAndDeletedAtIsNull(articleId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
 
         BoardEntity board = article.getBoard();
         Long userId = currentUserService.getOptionalUserId().orElse(null);
@@ -553,20 +553,20 @@ public class ArticleService {
             : boardMemberRepository.findByUserIdAndBoardId(userId, board.getId()).orElse(null);
 
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         EnumSet<ContentVisibility> allowed = boardAccessPolicy.resolveAllowedVisibilities(board, user, member);
         if (!allowed.contains(article.getVisibility())) {
-            throw new AccessDeniedException("게시글 조회 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
 
         ArticleFileEntity mapping = articleFileRepository.findByArticleIdAndFileId(articleId, fileId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "attachment not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ATTACHMENT_NOT_FOUND));
 
         FileEntity file = mapping.getFile();
         if (file == null || file.isDeleted() || !isAttachmentFile(file)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "attachment not found");
+            throw new ApiException(ErrorCode.ATTACHMENT_NOT_FOUND);
         }
 
         return fileStorage.resolveDownloadUrl(
@@ -586,12 +586,12 @@ public class ArticleService {
         }
         for (Long fileId : normalized) {
             FileEntity file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new IllegalArgumentException("file not found: " + fileId));
+                .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
             if (file.isDeleted()) {
                 continue;
             }
             if (!isAttachableFile(file)) {
-                throw new IllegalArgumentException("첨부할 수 없는 파일입니다.");
+                throw new ApiException(ErrorCode.ARTICLE_FILE_NOT_ATTACHABLE);
             }
             ArticleFileEntity mapping = ArticleFileEntity.builder()
                 .article(article)
@@ -626,12 +626,12 @@ public class ArticleService {
                 continue;
             }
             FileEntity file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new IllegalArgumentException("file not found: " + fileId));
+                .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
             if (file.isDeleted()) {
                 continue;
             }
             if (!isAttachableFile(file)) {
-                throw new IllegalArgumentException("첨부할 수 없는 파일입니다.");
+                throw new ApiException(ErrorCode.ARTICLE_FILE_NOT_ATTACHABLE);
             }
             ArticleFileEntity mapping = ArticleFileEntity.builder()
                 .article(article)
@@ -729,12 +729,12 @@ public class ArticleService {
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new IllegalArgumentException("board not found: " + boardId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private BoardEntity getBoardForRead(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
@@ -744,7 +744,7 @@ public class ArticleService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private ArticleCategoryEntity getCategoryForBoard(Long categoryId, BoardEntity board) {
@@ -752,9 +752,9 @@ public class ArticleService {
             return null;
         }
         ArticleCategoryEntity category = articleCategoryRepository.findById(categoryId)
-            .orElseThrow(() -> new IllegalArgumentException("category not found: " + categoryId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
         if (!category.getBoard().getId().equals(board.getId())) {
-            throw new IllegalArgumentException("게시판 카테고리가 아닙니다.");
+            throw new ApiException(ErrorCode.BOARD_CATEGORY_INVALID);
         }
         return category;
     }
@@ -766,7 +766,7 @@ public class ArticleService {
         if (boardAccessPolicy.isManagerOrAdmin(user)) {
             return;
         }
-        throw new AccessDeniedException("게시글 삭제 권한이 없습니다.");
+        throw new AccessDeniedException("Access Denied");
     }
 
     private Map<Long, Long> loadCommentCounts(
@@ -855,7 +855,7 @@ public class ArticleService {
 
     private ArticleEntity getArticleForReaction(Long articleId, UserEntity user) {
         ArticleEntity article = articleRepository.findByIdAndDeletedAtIsNull(articleId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
 
         BoardEntity board = article.getBoard();
         BoardMemberEntity member = boardMemberRepository
@@ -863,12 +863,12 @@ public class ArticleService {
             .orElse(null);
 
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         EnumSet<ContentVisibility> allowed = boardAccessPolicy.resolveAllowedVisibilities(board, user, member);
         if (!allowed.contains(article.getVisibility())) {
-            throw new AccessDeniedException("게시글 반응 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
         return article;
     }

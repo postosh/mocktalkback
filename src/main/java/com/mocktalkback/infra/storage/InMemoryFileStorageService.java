@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.storage;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Instant;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +32,7 @@ public class InMemoryFileStorageService implements FileStorage {
     @Override
     public void write(String storageKey, byte[] bytes, String mimeType) {
         if (bytes == null) {
-            throw new IllegalArgumentException("저장할 파일 바이트가 비어있습니다.");
+            throw new ApiException(ErrorCode.FILE_BYTES_EMPTY);
         }
         store.put(normalizeKey(storageKey), new StoredObject(bytes, mimeType));
     }
@@ -78,7 +80,7 @@ public class InMemoryFileStorageService implements FileStorage {
 
     private String normalizeKey(String storageKey) {
         if (!StringUtils.hasText(storageKey)) {
-            throw new IllegalArgumentException("저장소 키가 비어있습니다.");
+            throw new ApiException(ErrorCode.STORAGE_KEY_EMPTY);
         }
         return storageKey.trim().replace('\\', '/').replaceAll("^/+", "");
     }

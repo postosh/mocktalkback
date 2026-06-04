@@ -1,13 +1,13 @@
 package com.mocktalkback.domain.newsbot.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.newsbot.config.NewsBotProperties;
 import com.mocktalkback.domain.newsbot.repository.NewsCollectionJobRepository;
@@ -34,9 +34,9 @@ public class NewsBotJobExecutionClaimService {
             return;
         }
         if (!newsCollectionJobRepository.existsById(jobId)) {
-            throw new IllegalArgumentException("뉴스봇 잡을 찾을 수 없습니다: " + jobId);
+            throw new ApiException(ErrorCode.NEWSBOT_JOB_NOT_FOUND);
         }
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 실행 중인 뉴스봇 잡입니다.");
+        throw new ApiException(ErrorCode.NEWSBOT_JOB_ALREADY_RUNNING);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

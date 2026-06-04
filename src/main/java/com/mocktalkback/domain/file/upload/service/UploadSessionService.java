@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.upload.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -133,7 +135,7 @@ public class UploadSessionService {
     @Transactional
     public UploadCompleteResponse complete(String uploadToken) {
         UploadSessionState state = uploadSessionRedisStore.consume(uploadToken)
-            .orElseThrow(() -> new IllegalArgumentException("유효하지 않거나 만료된 업로드 토큰입니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.UPLOAD_TOKEN_INVALID));
         uploadOrphanTrackerRedisStore.untrack(uploadToken);
 
         try {
@@ -191,11 +193,11 @@ public class UploadSessionService {
     private BoardResponse completeBoardImage(UploadSessionState state, StoredFile storedFile) {
         Long boardId = state.boardId();
         if (boardId == null || boardId <= 0L) {
-            throw new IllegalArgumentException("게시판 식별자가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_BOARD_ID_INVALID);
         }
         BoardImageUploadChannel channel = state.boardChannel();
         if (channel == null) {
-            throw new IllegalArgumentException("게시판 이미지 업로드 채널이 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_BOARD_CHANNEL_EMPTY);
         }
         if (channel == BoardImageUploadChannel.BOARD_OWNER) {
             return boardService.completeBoardImageUpload(boardId, storedFile, state.preserveMetadata());
@@ -208,10 +210,10 @@ public class UploadSessionService {
 
     private void verifyUploadedFile(UploadSessionState state, FileStorage.StoredObjectMeta objectMeta) {
         if (objectMeta.fileSize() == null || objectMeta.fileSize() <= 0L) {
-            throw new IllegalArgumentException("업로드된 파일 정보를 확인할 수 없습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_INFO_MISSING);
         }
         if (objectMeta.fileSize() != state.expectedFileSize()) {
-            throw new IllegalArgumentException("업로드 파일 크기가 요청과 일치하지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_SIZE_MISMATCH);
         }
 
         String resolvedMimeType = resolveMimeType(state.expectedMimeType(), objectMeta.mimeType());
@@ -245,7 +247,7 @@ public class UploadSessionService {
     private void verifyOwner(Long ownerId) {
         Long userId = currentUserService.getUserId();
         if (!userId.equals(ownerId)) {
-            throw new IllegalArgumentException("업로드 토큰 소유자가 일치하지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_TOKEN_OWNER_MISMATCH);
         }
     }
 

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.newsbot.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,7 +34,7 @@ public class NewsBotBoardProvisionService {
             return existing;
         }
         if (!job.isAutoCreateBoard()) {
-            throw new IllegalArgumentException("대상 게시판이 없고 자동 생성도 비활성화되어 있습니다: " + job.getTargetBoardSlug());
+            throw new ApiException(ErrorCode.NEWSBOT_TARGET_BOARD_MISSING, job.getTargetBoardSlug());
         }
 
         String boardName = StringUtils.hasText(job.getTargetBoardName())
@@ -72,7 +74,7 @@ public class NewsBotBoardProvisionService {
             return existing;
         }
         if (!job.isAutoCreateCategory()) {
-            throw new IllegalArgumentException("대상 카테고리가 없고 자동 생성도 비활성화되어 있습니다: " + job.getTargetCategoryName());
+            throw new ApiException(ErrorCode.NEWSBOT_TARGET_CATEGORY_MISSING, job.getTargetCategoryName());
         }
 
         return articleCategoryRepository.save(

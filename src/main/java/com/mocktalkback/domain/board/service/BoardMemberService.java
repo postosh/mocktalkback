@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.board.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -39,7 +41,7 @@ public class BoardMemberService {
     @Transactional(readOnly = true)
     public BoardMemberResponse findById(Long id) {
         BoardMemberEntity entity = boardMemberRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("board member not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_MEMBER_NOT_FOUND));
         return boardMapper.toResponse(entity);
     }
 
@@ -57,12 +59,12 @@ public class BoardMemberService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findById(boardId)
-            .orElseThrow(() -> new IllegalArgumentException("board not found: " + boardId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getGrantedByUser(Long userId) {
@@ -70,6 +72,6 @@ public class BoardMemberService {
             return null;
         }
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("granted by user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 }

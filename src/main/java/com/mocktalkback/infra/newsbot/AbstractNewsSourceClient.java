@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.newsbot;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.Map;
 
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -31,7 +33,7 @@ abstract class AbstractNewsSourceClient {
     protected String requireString(Map<String, Object> sourceConfig, String key, String label) {
         Object value = sourceConfig.get(key);
         if (value == null || value.toString().isBlank()) {
-            throw new IllegalArgumentException(label + " 설정이 필요합니다.");
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_UNSUPPORTED, label);
         }
         return value.toString().trim();
     }
