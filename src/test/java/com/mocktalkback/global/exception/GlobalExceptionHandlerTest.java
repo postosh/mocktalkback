@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import com.mocktalkback.support.MocktalkWebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -23,7 +23,7 @@ import com.mocktalkback.global.common.dto.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@WebMvcTest(controllers = TestExceptionController.class)
+@MocktalkWebMvcTest(controllers = TestExceptionController.class)
 @Import(GlobalExceptionHandler.class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = "SERVER_PORT=0")
@@ -218,7 +218,7 @@ class GlobalExceptionHandlerTest {
 
         // Then
         result
-                .andExpect(status().isPayloadTooLarge())
+                .andExpect(status().isContentTooLarge())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_PAYLOAD_TOO_LARGE.getCode()))
                 .andExpect(jsonPath("$.error.reason").value("파일 사이즈 제한 50MB"));

@@ -1,5 +1,6 @@
 package com.mocktalkback.global.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -10,15 +11,15 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.mocktalkback.domain.realtime.service.NotificationRealtimeTicketService;
 import com.mocktalkback.global.auth.OriginAllowlistFilter;
 import com.mocktalkback.global.auth.jwt.JwtAccessDeniedHandler;
 import com.mocktalkback.global.auth.jwt.JwtAuthEntryPoint;
-import com.mocktalkback.global.auth.jwt.JwtAuthFilter;
-import com.mocktalkback.global.auth.jwt.JwtTokenProvider;
+import com.mocktalkback.global.auth.jwt.MocktalkJwtAuthenticationConverter;
 import com.mocktalkback.global.auth.oauth2.CustomOAuth2UserService;
 import com.mocktalkback.global.auth.oauth2.OAuth2LoginFailureHandler;
 import com.mocktalkback.global.auth.oauth2.OAuth2LoginSuccessHandler;
@@ -34,11 +35,6 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
-    }
-
-    @Bean
-    public JwtAuthFilter jwtAuthFilter(JwtTokenProvider jwtTokenProvider) {
-        return new JwtAuthFilter(jwtTokenProvider);
     }
 
     @Bean
@@ -88,7 +84,8 @@ public class SecurityConfig {
     // OAuth2에서 생성된 세션이 API 호출을 "로그인된 것처럼" 인증해버리는 상황을 원천 차단한다.
     public SecurityFilterChain apiFilterChain(
             HttpSecurity http,
-            JwtAuthFilter jwtAuthFilter,
+            @Qualifier("accessJwtDecoder") JwtDecoder accessJwtDecoder,
+            MocktalkJwtAuthenticationConverter mocktalkJwtAuthenticationConverter,
             NotificationRealtimeTicketAuthFilter notificationRealtimeTicketAuthFilter,
             OriginAllowlistFilter originAllowlistFilter,
             JwtAuthEntryPoint jwtAuthEntryPoint,
@@ -128,10 +125,14 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jwtAuthEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler));
 
+        http.oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt
+                        .decoder(accessJwtDecoder)
+                        .jwtAuthenticationConverter(mocktalkJwtAuthenticationConverter)));
+
         http
-                .addFilterBefore(originAllowlistFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtAuthFilter, OriginAllowlistFilter.class)
-                .addFilterAfter(notificationRealtimeTicketAuthFilter, JwtAuthFilter.class);
+                .addFilterBefore(originAllowlistFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(notificationRealtimeTicketAuthFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }

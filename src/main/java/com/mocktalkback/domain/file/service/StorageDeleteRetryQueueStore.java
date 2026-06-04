@@ -10,8 +10,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class StorageDeleteRetryQueueStore {
@@ -22,11 +22,11 @@ public class StorageDeleteRetryQueueStore {
     private static final String DLQ_JOB_PREFIX = "storage:delete:dlq:item:";
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     public StorageDeleteRetryQueueStore(
         StringRedisTemplate stringRedisTemplate,
-        ObjectMapper objectMapper
+        JsonMapper objectMapper
     ) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
@@ -136,7 +136,7 @@ public class StorageDeleteRetryQueueStore {
     private String serialize(StorageDeleteRetryJob job) {
         try {
             return objectMapper.writeValueAsString(job);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("삭제 재시도 큐 직렬화에 실패했습니다.");
         }
     }
@@ -144,7 +144,7 @@ public class StorageDeleteRetryQueueStore {
     private StorageDeleteRetryJob deserialize(String raw) {
         try {
             return objectMapper.readValue(raw, StorageDeleteRetryJob.class);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("삭제 재시도 큐 역직렬화에 실패했습니다.");
         }
     }

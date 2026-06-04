@@ -5,8 +5,8 @@ import java.time.Instant;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import com.mocktalkback.domain.realtime.config.RealtimeRedisProperties;
 import com.mocktalkback.domain.realtime.dto.BoardRealtimeRedisMessage;
 import com.mocktalkback.domain.realtime.dto.NotificationRealtimeRedisMessage;
@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class RealtimeRedisPublisher {
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final RealtimeRedisProperties realtimeRedisProperties;
 
     public void publishNotification(
@@ -61,7 +61,7 @@ public class RealtimeRedisPublisher {
         try {
             String json = objectMapper.writeValueAsString(payload);
             stringRedisTemplate.convertAndSend(channel, json);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalStateException("실시간 이벤트 직렬화에 실패했습니다.", ex);
         }
     }

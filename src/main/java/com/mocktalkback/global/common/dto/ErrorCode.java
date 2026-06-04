@@ -14,7 +14,7 @@ public enum ErrorCode {
     COMMON_METHOD_NOT_ALLOWED("COMMON_405", HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP 메서드입니다."),
     COMMON_CONFLICT("COMMON_409", HttpStatus.CONFLICT, "요청이 충돌했습니다."),
     COMMON_TOO_MANY_REQUESTS("COMMON_429", HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다."),
-    COMMON_PAYLOAD_TOO_LARGE("COMMON_413", HttpStatus.PAYLOAD_TOO_LARGE, "요청 본문이 너무 큽니다."),
+    COMMON_PAYLOAD_TOO_LARGE("COMMON_413", HttpStatus.CONTENT_TOO_LARGE, "요청 본문이 너무 큽니다."),
     COMMON_INTERNAL_ERROR("COMMON_500", HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
 
     // ===== Auth / JWT =====

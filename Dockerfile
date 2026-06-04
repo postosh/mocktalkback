@@ -1,6 +1,6 @@
 # ================= STAGE 1: 빌드 환경 =================
-# JDK 21 버전을 빌드 베이스 이미지로 사용합니다.
-FROM eclipse-temurin:21-jdk-jammy AS builder
+# JDK 25 버전을 빌드 베이스 이미지로 사용합니다.
+FROM eclipse-temurin:25-jdk-jammy AS builder
 
 # 작업 디렉토리를 설정합니다.
 WORKDIR /workspace
@@ -19,8 +19,8 @@ COPY src src
 RUN chmod +x ./gradlew && ./gradlew build -x test
 
 # ================= STAGE 2: 실행 환경 =================
-# JRE 21 버전을 실행 베이스 이미지로 사용하여 이미지 크기를 최적화합니다.
-FROM eclipse-temurin:21-jre-jammy
+# JRE 25 버전을 실행 베이스 이미지로 사용하여 이미지 크기를 최적화합니다.
+FROM eclipse-temurin:25-jre-jammy
 
 # 작업 디렉토리를 설정합니다.
 WORKDIR /app

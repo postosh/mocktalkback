@@ -11,8 +11,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import com.mocktalkback.support.MocktalkWebMvcTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -26,7 +26,7 @@ import com.mocktalkback.domain.content.dto.AdminMarketRefreshResponse;
 import com.mocktalkback.domain.content.service.AdminContentMarketService;
 import com.mocktalkback.domain.content.type.MarketInstrumentCode;
 
-@WebMvcTest(controllers = AdminContentMarketController.class)
+@MocktalkWebMvcTest(controllers = AdminContentMarketController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = {
     "server.port=0",
