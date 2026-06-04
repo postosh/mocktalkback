@@ -38,9 +38,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
-	// 이미지 최적화
+	// 이미지 최적화 (WebP ImageIO — gotson 후속, JAR 내 네이티브 번들)
 	implementation 'net.coobird:thumbnailator:0.4.21'
-	implementation 'com.github.gotson:webp-imageio:0.2.2'
+	runtimeOnly 'com.github.usefulness:webp-imageio:0.10.2'
 
 	// 오브젝트 스토리지
 	implementation 'io.minio:minio:8.5.17'
@@ -110,6 +110,11 @@ tasks.withType(JavaCompile).configureEach {
 	options.compilerArgs << '-Xlint:deprecation'
 }
 
+tasks.named('bootRun') {
+	jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs '--enable-native-access=ALL-UNNAMED'
 }

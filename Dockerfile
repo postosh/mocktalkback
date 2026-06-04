@@ -36,4 +36,4 @@ EXPOSE 8082
 
 # 컨테이너가 시작될 때 JAR 파일을 실행하는 명령어를 설정합니다.
 # Spring 프로파일을 'prod'로 활성화하여 'application-prod.yml' 설정을 사용하도록 합니다.
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "app.jar"]
