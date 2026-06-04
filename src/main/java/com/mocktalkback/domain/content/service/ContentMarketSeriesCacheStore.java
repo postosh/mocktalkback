@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.content.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -98,10 +100,10 @@ public class ContentMarketSeriesCacheStore {
 
     private String key(MarketInstrumentCode instrumentCode, MarketSeriesPeriod period) {
         if (instrumentCode == null) {
-            throw new IllegalArgumentException("종목 코드가 비어 있습니다.");
+            throw new ApiException(ErrorCode.MARKET_SYMBOL_EMPTY);
         }
         if (period == null) {
-            throw new IllegalArgumentException("기간 코드가 비어 있습니다.");
+            throw new ApiException(ErrorCode.MARKET_PERIOD_CODE_EMPTY);
         }
         return KEY_PREFIX + instrumentCode.name() + ":" + period.name();
     }

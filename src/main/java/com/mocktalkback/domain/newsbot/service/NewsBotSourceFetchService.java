@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.newsbot.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +43,7 @@ public class NewsBotSourceFetchService {
         try {
             return objectMapper.writeValueAsString(sourceConfig);
         } catch (Exception exception) {
-            throw new IllegalArgumentException("외부 소스 설정을 저장할 수 없습니다.", exception);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_SAVE_FAILED);
         }
     }
 
@@ -49,14 +51,14 @@ public class NewsBotSourceFetchService {
         try {
             return objectMapper.readValue(sourceConfigJson, MAP_TYPE);
         } catch (Exception exception) {
-            throw new IllegalArgumentException("외부 소스 설정을 읽을 수 없습니다.", exception);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_READ_FAILED);
         }
     }
 
     private NewsSourceClient clientFor(NewsSourceType sourceType) {
         NewsSourceClient client = clients.get(sourceType);
         if (client == null) {
-            throw new IllegalArgumentException("지원하지 않는 외부 소스입니다: " + sourceType);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_UNSUPPORTED, sourceType);
         }
         return client;
     }

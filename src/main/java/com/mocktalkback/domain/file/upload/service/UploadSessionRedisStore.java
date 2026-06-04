@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.upload.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -28,7 +30,7 @@ public class UploadSessionRedisStore {
 
     public void save(UploadSessionState state, Duration ttl) {
         if (state == null) {
-            throw new IllegalArgumentException("업로드 세션 상태가 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_SESSION_STATE_EMPTY);
         }
         String serialized = serialize(state);
         stringRedisTemplate.opsForValue().set(key(state.uploadToken()), serialized, ttl);
@@ -56,7 +58,7 @@ public class UploadSessionRedisStore {
 
     private String key(String uploadToken) {
         if (!StringUtils.hasText(uploadToken)) {
-            throw new IllegalArgumentException("업로드 토큰이 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_TOKEN_EMPTY);
         }
         return KEY_PREFIX + uploadToken.trim();
     }

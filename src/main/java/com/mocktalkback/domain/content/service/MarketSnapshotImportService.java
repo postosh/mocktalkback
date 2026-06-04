@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.content.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,10 +44,10 @@ public class MarketSnapshotImportService {
                 return parseExcel(file.getInputStream(), selectedInstrument);
             }
         } catch (IOException ex) {
-            throw new IllegalArgumentException("임포트 파일을 읽지 못했습니다.", ex);
+            throw new ApiException(ErrorCode.MARKET_IMPORT_READ_FAILED);
         }
 
-        throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. CSV 또는 XLSX 파일만 업로드할 수 있습니다.");
+        throw new ApiException(ErrorCode.MARKET_IMPORT_FORMAT_UNSUPPORTED);
     }
 
     private MarketSnapshotImportParsedResult parseCsv(InputStream inputStream, MarketInstrumentCode selectedInstrument) throws IOException {
@@ -54,7 +56,7 @@ public class MarketSnapshotImportService {
             List<AdminMarketImportFailureResponse> failures = new ArrayList<>();
             String headerLine = readNextNonEmptyLine(reader);
             if (headerLine == null) {
-                throw new IllegalArgumentException("비어 있는 CSV 파일은 업로드할 수 없습니다.");
+                throw new ApiException(ErrorCode.MARKET_IMPORT_CSV_EMPTY);
             }
             Map<String, Integer> headerMap = createHeaderMap(parseCsvLine(headerLine));
             validateHeaders(headerMap, selectedInstrument == null);
@@ -83,13 +85,13 @@ public class MarketSnapshotImportService {
         try (Workbook workbook = WorkbookFactory.create(inputStream)) {
             Sheet sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
             if (sheet == null) {
-                throw new IllegalArgumentException("비어 있는 XLSX 파일은 업로드할 수 없습니다.");
+                throw new ApiException(ErrorCode.MARKET_IMPORT_XLSX_EMPTY);
             }
 
             DataFormatter formatter = new DataFormatter();
             Row headerRow = findFirstNonEmptyRow(sheet);
             if (headerRow == null) {
-                throw new IllegalArgumentException("비어 있는 XLSX 파일은 업로드할 수 없습니다.");
+                throw new ApiException(ErrorCode.MARKET_IMPORT_XLSX_EMPTY);
             }
 
             Map<String, Integer> headerMap = createHeaderMap(readRowValues(headerRow, formatter));
@@ -118,7 +120,7 @@ public class MarketSnapshotImportService {
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new IllegalArgumentException("XLSX 파일을 해석하지 못했습니다.", ex);
+            throw new ApiException(ErrorCode.MARKET_IMPORT_XLSX_PARSE_FAILED);
         }
     }
 
@@ -185,13 +187,13 @@ public class MarketSnapshotImportService {
 
     private void validateHeaders(Map<String, Integer> headerMap, boolean unifiedFile) {
         if (unifiedFile && !headerMap.containsKey("instrument_code")) {
-            throw new IllegalArgumentException("통합 파일에는 instrument_code 컬럼이 필요합니다.");
+            throw new ApiException(ErrorCode.MARKET_INSTRUMENT_CODE_REQUIRED);
         }
         if (!headerMap.containsKey("observed_at")) {
-            throw new IllegalArgumentException("observed_at 컬럼이 필요합니다.");
+            throw new ApiException(ErrorCode.MARKET_OBSERVED_AT_REQUIRED);
         }
         if (!headerMap.containsKey("price_value")) {
-            throw new IllegalArgumentException("price_value 컬럼이 필요합니다.");
+            throw new ApiException(ErrorCode.MARKET_PRICE_VALUE_REQUIRED);
         }
     }
 
@@ -208,12 +210,12 @@ public class MarketSnapshotImportService {
         } else if (!instrumentValue.isBlank()) {
             MarketInstrumentCode rowInstrumentCode = parseInstrumentCode(instrumentValue);
             if (rowInstrumentCode != selectedInstrument) {
-                throw new IllegalArgumentException("선택한 종목과 파일의 instrument_code 값이 일치하지 않습니다.");
+                throw new ApiException(ErrorCode.MARKET_INSTRUMENT_MISMATCH);
             }
         }
 
         if (instrumentCode == null) {
-            throw new IllegalArgumentException("종목 코드를 확인할 수 없습니다.");
+            throw new ApiException(ErrorCode.MARKET_INSTRUMENT_UNKNOWN);
         }
 
         String observedAtValue = readValue(headerMap, values, "observed_at");
@@ -237,18 +239,18 @@ public class MarketSnapshotImportService {
 
     private MarketInstrumentCode parseInstrumentCode(String rawValue) {
         if (rawValue == null || rawValue.isBlank()) {
-            throw new IllegalArgumentException("instrument_code 값이 비어 있습니다.");
+            throw new ApiException(ErrorCode.MARKET_INSTRUMENT_CODE_EMPTY);
         }
         try {
             return MarketInstrumentCode.valueOf(rawValue.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("지원하지 않는 instrument_code 값입니다: " + rawValue);
+            throw new ApiException(ErrorCode.MARKET_INSTRUMENT_UNSUPPORTED, rawValue);
         }
     }
 
     private Instant parseObservedAt(String rawValue) {
         if (rawValue == null || rawValue.isBlank()) {
-            throw new IllegalArgumentException("observed_at 값이 비어 있습니다.");
+            throw new ApiException(ErrorCode.MARKET_OBSERVED_AT_EMPTY);
         }
         try {
             if (rawValue.length() == 10) {
@@ -259,19 +261,19 @@ public class MarketSnapshotImportService {
             try {
                 return LocalDateTime.parse(rawValue).atZone(ZoneOffset.UTC).toInstant();
             } catch (DateTimeParseException ignored) {
-                throw new IllegalArgumentException("observed_at 형식이 올바르지 않습니다: " + rawValue);
+                throw new ApiException(ErrorCode.MARKET_OBSERVED_AT_INVALID, rawValue);
             }
         }
     }
 
     private BigDecimal parsePriceValue(String rawValue) {
         if (rawValue == null || rawValue.isBlank()) {
-            throw new IllegalArgumentException("price_value 값이 비어 있습니다.");
+            throw new ApiException(ErrorCode.MARKET_PRICE_EMPTY);
         }
         try {
             return new BigDecimal(rawValue.trim());
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("price_value 형식이 올바르지 않습니다: " + rawValue);
+            throw new ApiException(ErrorCode.MARKET_PRICE_INVALID, rawValue);
         }
     }
 

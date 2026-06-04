@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.moderation.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -8,11 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.board.entity.BoardEntity;
 import com.mocktalkback.domain.board.repository.BoardRepository;
@@ -96,7 +96,7 @@ public class ModerationService {
     public ReportDetailResponse createReport(ReportCreateRequest request) {
         UserEntity reporter = getCurrentUser();
         if (request.targetType() == ReportTargetType.USER && reporter.getId().equals(request.targetId())) {
-            throw new IllegalArgumentException("본인을 신고할 수 없습니다.");
+            throw new ApiException(ErrorCode.REPORT_SELF);
         }
         boolean duplicated = reportRepository.existsByReporterUserIdAndTargetTypeAndTargetIdAndStatusIn(
             reporter.getId(),
@@ -105,7 +105,7 @@ public class ModerationService {
             List.of(ReportStatus.PENDING, ReportStatus.IN_REVIEW)
         );
         if (duplicated) {
-            throw new IllegalArgumentException("이미 처리 중인 신고가 있습니다.");
+            throw new ApiException(ErrorCode.REPORT_ALREADY_IN_PROGRESS);
         }
         ReportEntity latest = reportRepository
             .findTopByReporterUserIdAndTargetTypeAndTargetIdOrderByCreatedAtDesc(
@@ -115,7 +115,7 @@ public class ModerationService {
             )
             .orElse(null);
         if (latest != null && isCooldownTarget(latest)) {
-            throw new IllegalArgumentException("최근 24시간 내 동일 대상 신고 이력이 있습니다.");
+            throw new ApiException(ErrorCode.REPORT_DUPLICATE_24H);
         }
         ReportTargetContext context = resolveReportTarget(request);
         ReportEntity report = ReportEntity.builder()
@@ -186,7 +186,7 @@ public class ModerationService {
         requireBoardAdmin(actor, board);
         ReportEntity report = getReport(reportId);
         if (report.getBoard() == null || !board.getId().equals(report.getBoard().getId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판 신고가 아닙니다.");
+            throw new ApiException(ErrorCode.BOARD_REPORT_NOT_FOUND);
         }
         return toReportDetail(report);
     }
@@ -204,7 +204,7 @@ public class ModerationService {
         requireBoardAdmin(actor, board);
         ReportEntity report = getReport(reportId);
         if (report.getBoard() == null || !board.getId().equals(report.getBoard().getId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판 신고가 아닙니다.");
+            throw new ApiException(ErrorCode.BOARD_REPORT_NOT_FOUND);
         }
         report.process(request.status(), actor, request.processedNote());
         saveAuditLog(
@@ -333,7 +333,7 @@ public class ModerationService {
         requireBoardAdmin(actor, board);
         SanctionEntity sanction = getSanction(sanctionId);
         if (sanction.getBoard() == null || !board.getId().equals(sanction.getBoard().getId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판 제재가 아닙니다.");
+            throw new ApiException(ErrorCode.BOARD_SANCTION_NOT_FOUND);
         }
         revokeSanction(sanction, actor, request.revokedReason());
         saveAuditLog(
@@ -385,13 +385,13 @@ public class ModerationService {
     ) {
         SanctionScopeType scopeType = request.scopeType();
         if (boardOnly && scopeType != SanctionScopeType.BOARD) {
-            throw new AccessDeniedException("게시판 제재는 BOARD 범위만 가능합니다.");
+            throw new AccessDeniedException("Access Denied");
         }
         BoardEntity board = resolveSanctionBoard(scopeType, request.boardId(), fixedBoard);
         Instant startsAt = request.startsAt() == null ? Instant.now() : request.startsAt();
         Instant endsAt = request.endsAt();
         if (endsAt != null && endsAt.isBefore(startsAt)) {
-            throw new IllegalArgumentException("제재 종료일시는 시작일시 이후여야 합니다.");
+            throw new ApiException(ErrorCode.SANCTION_END_BEFORE_START);
         }
         UserEntity target = getUser(request.userId());
         ReportEntity report = request.reportId() == null ? null : getReport(request.reportId());
@@ -412,7 +412,7 @@ public class ModerationService {
 
     private void revokeSanction(SanctionEntity sanction, UserEntity actor, String reason) {
         if (sanction.getRevokedAt() != null) {
-            throw new IllegalStateException("이미 해제된 제재입니다.");
+            throw new ApiException(ErrorCode.SANCTION_ALREADY_REVOKED);
         }
         sanction.revoke(actor, reason);
     }
@@ -444,7 +444,7 @@ public class ModerationService {
         }
         if (scopeType == SanctionScopeType.BOARD) {
             if (requestBoardId == null) {
-                throw new IllegalArgumentException("BOARD 범위 제재는 boardId가 필요합니다.");
+                throw new ApiException(ErrorCode.SANCTION_BOARD_ID_REQUIRED);
             }
             return getBoard(requestBoardId);
         }
@@ -549,7 +549,7 @@ public class ModerationService {
 
     private ReportEntity getReport(Long reportId) {
         return reportRepository.findById(reportId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "신고를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.REPORT_NOT_FOUND));
     }
 
     private ReportTargetContext resolveReportTarget(ReportCreateRequest request) {
@@ -577,7 +577,7 @@ public class ModerationService {
             String snapshot = buildBoardSnapshot(board);
             return new ReportTargetContext(null, board, snapshot);
         }
-        throw new IllegalArgumentException("지원하지 않는 신고 유형입니다.");
+        throw new ApiException(ErrorCode.REPORT_TYPE_UNSUPPORTED);
     }
 
     private boolean isCooldownTarget(ReportEntity latest) {
@@ -595,32 +595,32 @@ public class ModerationService {
 
     private ArticleEntity getArticle(Long articleId) {
         return articleRepository.findByIdAndDeletedAtIsNull(articleId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
     }
 
     private CommentEntity getComment(Long commentId) {
         return commentRepository.findByIdAndDeletedAtIsNull(commentId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
     private SanctionEntity getSanction(Long sanctionId) {
         return sanctionRepository.findById(sanctionId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "제재를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.SANCTION_NOT_FOUND));
     }
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private UserEntity getActiveUser(Long userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
@@ -630,7 +630,7 @@ public class ModerationService {
 
     private void requireAdmin(UserEntity actor) {
         if (!roleEvaluator.isAdmin(actor)) {
-            throw new AccessDeniedException("사이트 관리자 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
     }
 

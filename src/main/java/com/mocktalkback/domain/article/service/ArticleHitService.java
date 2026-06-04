@@ -1,11 +1,11 @@
 package com.mocktalkback.domain.article.service;
 
-import org.springframework.http.HttpStatus;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,7 +34,7 @@ public class ArticleHitService {
         });
 
         if (nextHit == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found");
+            throw new ApiException(ErrorCode.ARTICLE_NOT_FOUND);
         }
         return nextHit;
     }

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -116,40 +118,40 @@ public class ArticleAttachmentFileService {
 
     private void validateStoredFile(StoredFile storedFile) {
         if (storedFile == null) {
-            throw new IllegalArgumentException("업로드 파일 정보가 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_INFO_MISSING);
         }
         if (storedFile.fileSize() == null || storedFile.fileSize() <= 0L) {
-            throw new IllegalArgumentException("파일 크기가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_SIZE_INVALID);
         }
         if (storedFile.fileSize() > MAX_UPLOAD_SIZE) {
-            throw new IllegalArgumentException("파일 사이즈 제한 50MB");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_SIZE_MAX);
         }
 
         String fileName = storedFile.fileName();
         String extension = normalizeExtension(resolveExtension(fileName));
         if (!StringUtils.hasText(extension)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
         if (BLOCKED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("업로드할 수 없는 확장자입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_EXTENSION_BLOCKED);
         }
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
 
         String contentType = storedFile.mimeType();
         if (!StringUtils.hasText(contentType)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
         String normalizedContentType = normalizeMimeType(contentType);
         if (BLOCKED_MIME_TYPES.contains(normalizedContentType)) {
-            throw new IllegalArgumentException("업로드할 수 없는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_BLOCKED);
         }
         if ("application/octet-stream".equals(normalizedContentType)) {
             return;
         }
         if (!ALLOWED_MIME_TYPES.contains(normalizedContentType)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
     }
 

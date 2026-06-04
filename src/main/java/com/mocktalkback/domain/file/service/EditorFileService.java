@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -54,17 +56,17 @@ public class EditorFileService {
 
     private void validateStoredFile(StoredFile storedFile) {
         if (storedFile == null) {
-            throw new IllegalArgumentException("업로드 파일 정보가 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_INFO_MISSING);
         }
         if (storedFile.fileSize() == null || storedFile.fileSize() <= 0L) {
-            throw new IllegalArgumentException("파일 크기가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_SIZE_INVALID);
         }
         if (storedFile.fileSize() > MAX_UPLOAD_SIZE) {
-            throw new IllegalArgumentException("파일 사이즈 제한 50MB");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_SIZE_MAX);
         }
         String contentType = storedFile.mimeType();
         if (!StringUtils.hasText(contentType)) {
-            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.EDITOR_FILE_UNSUPPORTED);
         }
         if (contentType.startsWith("image/")) {
             return;
@@ -72,7 +74,7 @@ public class EditorFileService {
         if ("video/mp4".equals(contentType) || "video/webm".equals(contentType) || "video/ogg".equals(contentType)) {
             return;
         }
-        throw new IllegalArgumentException("이미지 또는 MP4/WebM/Ogg 영상만 업로드할 수 있습니다.");
+        throw new ApiException(ErrorCode.EDITOR_MEDIA_TYPE_INVALID);
     }
 
     private String resolveFileClassCode(String contentType) {

@@ -13,7 +13,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.server.ResponseStatusException;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 import com.mocktalkback.domain.file.dto.FileViewTicketResponse;
 import com.mocktalkback.domain.file.entity.FileClassEntity;
@@ -114,8 +115,9 @@ class FileViewTicketServiceTest {
 
         // when & then: 다른 파일의 ticket이면 404 예외가 발생한다.
         assertThatThrownBy(() -> service.validate(31L, "valid-ticket"))
-            .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("404 NOT_FOUND");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.FILE_NOT_FOUND);
     }
 
     // 보호 파일 ticket 검증은 남은 TTL을 반환해야 한다.

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.upload.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
@@ -26,10 +28,10 @@ public class UploadStorageKeyFactory {
 
     public PreparedUploadFile prepare(String fileClassCode, Long ownerId, String originalFileName) {
         if (!StringUtils.hasText(fileClassCode)) {
-            throw new IllegalArgumentException("파일 분류 코드가 비어있습니다.");
+            throw new ApiException(ErrorCode.FILE_CLASS_CODE_EMPTY);
         }
         if (ownerId == null) {
-            throw new IllegalArgumentException("파일 소유자 식별자가 비어있습니다.");
+            throw new ApiException(ErrorCode.FILE_OWNER_EMPTY);
         }
         String resolvedOriginalName = resolveOriginalFileName(originalFileName);
         String sanitizedOriginalName = sanitizeFileNameForStorage(resolvedOriginalName);

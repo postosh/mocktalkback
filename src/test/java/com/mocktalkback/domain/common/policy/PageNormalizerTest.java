@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
+
 class PageNormalizerTest {
 
     private final PageNormalizer pageNormalizer = new PageNormalizer();
@@ -30,8 +33,9 @@ class PageNormalizerTest {
 
         // When, Then: page 정규화 시 예외가 발생해야 함
         assertThatThrownBy(() -> pageNormalizer.normalizePage(page))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("page는 0 이상이어야 합니다.");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.PAGE_INVALID);
     }
 
     // size가 null이면 기본값을 반환해야 한다.
@@ -55,8 +59,9 @@ class PageNormalizerTest {
 
         // When, Then: size 정규화 시 예외가 발생해야 함
         assertThatThrownBy(() -> pageNormalizer.normalizeSize(size, 50))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("size는 1~50 사이여야 합니다.");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.PAGE_SIZE_INVALID);
     }
 }
 

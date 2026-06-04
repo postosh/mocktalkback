@@ -19,13 +19,13 @@ import com.mocktalkback.global.auth.jwt.JwtTokenProvider;
 import com.mocktalkback.global.auth.jwt.RefreshTokenService;
 import com.mocktalkback.global.auth.jwt.RefreshTokenService.Rotated;
 import com.mocktalkback.global.auth.oauth2.OAuth2CodeService;
+import com.mocktalkback.global.common.dto.ErrorCode;
 import com.mocktalkback.global.common.util.HandleGenerator;
 import com.mocktalkback.global.common.util.ActivityPointPolicy;
+import com.mocktalkback.global.i18n.ApiException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @Service
@@ -43,19 +43,19 @@ public class AuthService {
     @Transactional
     public void join(JoinRequest joinDto) {
         if (!joinDto.password().equals(joinDto.confirmPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            throw new ApiException(ErrorCode.USER_PASSWORD_MISMATCH);
         }
 
         String loginId = joinDto.loginId().trim();
         if (!StringUtils.hasText(loginId)) {
-            throw new IllegalArgumentException("아이디를 입력해주세요.");
+            throw new ApiException(ErrorCode.USER_LOGIN_ID_REQUIRED);
         }
         if (userRepository.existsByLoginId(loginId)) {
-            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
+            throw new ApiException(ErrorCode.USER_LOGIN_ID_ALREADY_EXISTS);
         }
         String email = joinDto.email().trim();
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
+            throw new ApiException(ErrorCode.USER_EMAIL_ALREADY_EXISTS);
         }
 
         String userName = resolveOptional(joinDto.userName(), loginId);
@@ -69,7 +69,7 @@ public class AuthService {
             handle = joinDto.handle().trim();
             requireMaxLength(handle, 24, "핸들");
             if (userRepository.existsByHandle(handle)) {
-                throw new IllegalArgumentException("이미 사용 중인 핸들입니다.");
+                throw new ApiException(ErrorCode.USER_HANDLE_ALREADY_EXISTS);
             }
         } else {
             handle = handleGenerator.generateUniqueHandle();
@@ -102,24 +102,24 @@ public class AuthService {
 
     private void requireMaxLength(String value, int max, String fieldName) {
         if (value.length() > max) {
-            throw new IllegalArgumentException(fieldName + "은 " + max + "자 이하이어야 합니다.");
+            throw new ApiException(ErrorCode.USER_FIELD_MAX_LENGTH, fieldName, max);
         }
     }
 
     @Transactional(readOnly = true)
     public AuthTokens login(LoginRequest req) {
         UserEntity u = userRepository.findByLoginId(req.loginId())
-                .orElseThrow(() -> new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다."));
+                .orElseThrow(() -> new ApiException(ErrorCode.AUTH_INVALID_CREDENTIALS));
 
         if (u.isDeleted()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "탈퇴한 계정입니다.");
+            throw new ApiException(ErrorCode.AUTH_ACCOUNT_WITHDRAWN);
         }
         if (!u.isEnabled() || u.isLocked()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "계정이 비활성화/잠금 상태입니다.");
+            throw new ApiException(ErrorCode.AUTH_ACCOUNT_DISABLED);
         }
 
         if (!passwordEncoder.matches(req.password(), u.getPwHash())) {
-            throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
         String token = jwt.createAccessToken(
@@ -138,14 +138,14 @@ public class AuthService {
         Rotated rotated = refreshTokenService.rotate(refreshToken);
 
         UserEntity user = userRepository.findById(rotated.userId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
 
         if (!user.isEnabled() || user.isLocked()) {
             try {
                 refreshTokenService.revoke(refreshToken);
-            } catch (ResponseStatusException ignored) {
+            } catch (ApiException ignored) {
             }
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            throw new ApiException(ErrorCode.COMMON_UNAUTHORIZED);
         }
 
         String access = jwt.createAccessToken(
@@ -167,14 +167,14 @@ public class AuthService {
     public AccessTokenResult exchangeOAuth2Code(String code) {
         Long userId = oAuth2CodeService.consume(code);
         if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "OAUTH2_CODE_INVALID");
+            throw new ApiException(ErrorCode.OAUTH2_CODE_INVALID);
         }
 
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
 
         if (!user.isEnabled() || user.isLocked()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            throw new ApiException(ErrorCode.COMMON_UNAUTHORIZED);
         }
 
         String access = jwt.createAccessToken(

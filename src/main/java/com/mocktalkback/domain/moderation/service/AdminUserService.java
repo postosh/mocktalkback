@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.moderation.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -68,14 +70,14 @@ public class AdminUserService {
     public AdminUserListItemResponse changeRole(Long userId, String roleName) {
         UserEntity user = getUser(userId);
         RoleEntity role = roleRepository.findByRoleName(roleName)
-            .orElseThrow(() -> new IllegalArgumentException("권한이 존재하지 않습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.ROLE_NOT_FOUND));
         user.changeRole(role);
         return AdminUserListItemResponse.from(user);
     }
 
     private UserEntity getUser(Long userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
 }

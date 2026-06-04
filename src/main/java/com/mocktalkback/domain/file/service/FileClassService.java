@@ -11,6 +11,8 @@ import com.mocktalkback.domain.file.dto.FileClassUpdateRequest;
 import com.mocktalkback.domain.file.entity.FileClassEntity;
 import com.mocktalkback.domain.file.mapper.FileMapper;
 import com.mocktalkback.domain.file.repository.FileClassRepository;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +33,7 @@ public class FileClassService {
     @Transactional(readOnly = true)
     public FileClassResponse findById(Long id) {
         FileClassEntity entity = fileClassRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("file class not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_CLASS_NOT_FOUND));
         return fileMapper.toResponse(entity);
     }
 
@@ -45,7 +47,7 @@ public class FileClassService {
     @Transactional
     public FileClassResponse update(Long id, FileClassUpdateRequest request) {
         FileClassEntity entity = fileClassRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("file class not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_CLASS_NOT_FOUND));
         entity.update(request.name(), request.description(), request.mediaKind());
         return fileMapper.toResponse(entity);
     }

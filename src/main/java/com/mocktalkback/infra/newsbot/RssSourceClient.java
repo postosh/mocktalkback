@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.newsbot;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.io.StringReader;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -97,7 +99,7 @@ public class RssSourceClient extends AbstractNewsSourceClient implements NewsSou
             }
             return items;
         } catch (Exception exception) {
-            throw new IllegalArgumentException("RSS/Atom 피드를 가져오지 못했습니다.", exception);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_READ_FAILED);
         }
     }
 

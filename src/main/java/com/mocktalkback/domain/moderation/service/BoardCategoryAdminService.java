@@ -1,12 +1,12 @@
 package com.mocktalkback.domain.moderation.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.article.dto.ArticleCategoryResponse;
 import com.mocktalkback.domain.article.entity.ArticleCategoryEntity;
@@ -53,7 +53,7 @@ public class BoardCategoryAdminService {
         boardAdminPermissionGuard.requireBoardAdmin(actor, board);
         String categoryName = normalizeName(request.categoryName());
         if (articleCategoryRepository.existsByBoardIdAndCategoryNameIgnoreCase(boardId, categoryName)) {
-            throw new IllegalArgumentException("이미 존재하는 카테고리입니다.");
+            throw new ApiException(ErrorCode.BOARD_CATEGORY_DUPLICATE);
         }
         ArticleCategoryEntity entity = ArticleCategoryEntity.builder()
             .board(board)
@@ -73,7 +73,7 @@ public class BoardCategoryAdminService {
         String categoryName = normalizeName(request.categoryName());
         if (!entity.getCategoryName().equalsIgnoreCase(categoryName)
             && articleCategoryRepository.existsByBoardIdAndCategoryNameIgnoreCase(boardId, categoryName)) {
-            throw new IllegalArgumentException("이미 존재하는 카테고리입니다.");
+            throw new ApiException(ErrorCode.BOARD_CATEGORY_DUPLICATE);
         }
         entity.updateName(categoryName);
         return articleMapper.toResponse(entity);
@@ -87,36 +87,36 @@ public class BoardCategoryAdminService {
         ArticleCategoryEntity entity = getCategory(categoryId);
         ensureSameBoard(board, entity);
         if (articleRepository.existsByCategoryIdAndDeletedAtIsNull(categoryId)) {
-            throw new IllegalArgumentException("카테고리에 게시글이 존재합니다.");
+            throw new ApiException(ErrorCode.BOARD_CATEGORY_HAS_ARTICLES);
         }
         articleCategoryRepository.delete(entity);
     }
 
     private ArticleCategoryEntity getCategory(Long categoryId) {
         return articleCategoryRepository.findById(categoryId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "카테고리를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
         Long userId = currentUserService.getUserId();
         return userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private void ensureSameBoard(BoardEntity board, ArticleCategoryEntity category) {
         if (!board.getId().equals(category.getBoard().getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "게시판 카테고리가 아닙니다.");
+            throw new ApiException(ErrorCode.BOARD_CATEGORY_INVALID);
         }
     }
 
     private String normalizeName(String categoryName) {
         if (!StringUtils.hasText(categoryName)) {
-            throw new IllegalArgumentException("카테고리명을 입력해주세요.");
+            throw new ApiException(ErrorCode.BOARD_CATEGORY_NAME_REQUIRED);
         }
         return categoryName.trim();
     }

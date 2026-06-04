@@ -88,8 +88,7 @@ class BoardAccessPolicyTest {
 
         // When, Then: 글쓰기 권한 검사 시 예외가 발생해야 함
         assertThatThrownBy(() -> boardAccessPolicy.requireCanWrite(board, user, pending))
-            .isInstanceOf(AccessDeniedException.class)
-            .hasMessageContaining("가입 승인 후 글쓰기가 가능합니다.");
+            .isInstanceOf(AccessDeniedException.class);
     }
 
     // 게시판 관리 권한은 OWNER 또는 ADMIN에게만 허용되어야 한다.
@@ -101,9 +100,8 @@ class BoardAccessPolicyTest {
         BoardMemberEntity member = createMember(user, board, BoardRole.MEMBER);
 
         // When, Then: 게시판 관리 권한 검사 시 예외가 발생해야 함
-        assertThatThrownBy(() -> boardAccessPolicy.requireManagePermission(user, member, "게시판 관리 권한이 없습니다."))
-            .isInstanceOf(AccessDeniedException.class)
-            .hasMessageContaining("게시판 관리 권한이 없습니다.");
+        assertThatThrownBy(() -> boardAccessPolicy.requireManagePermission(user, member))
+            .isInstanceOf(AccessDeniedException.class);
     }
 
     private BoardEntity createBoard(BoardVisibility visibility, BoardArticleWritePolicy policy) {

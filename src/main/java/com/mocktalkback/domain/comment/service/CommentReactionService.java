@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.comment.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class CommentReactionService {
     @Transactional(readOnly = true)
     public CommentReactionResponse findById(Long id) {
         CommentReactionEntity entity = commentReactionRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("comment reaction not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_REACTION_NOT_FOUND));
         return commentMapper.toResponse(entity);
     }
 
@@ -56,11 +58,11 @@ public class CommentReactionService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private CommentEntity getComment(Long commentId) {
         return commentRepository.findById(commentId)
-            .orElseThrow(() -> new IllegalArgumentException("comment not found: " + commentId));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
     }
 }

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.upload.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.Locale;
 import java.util.Set;
 
@@ -77,19 +79,19 @@ public class UploadPolicyValidator {
         UploadInitContext context
     ) {
         if (purpose == null) {
-            throw new IllegalArgumentException("업로드 목적이 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_PURPOSE_EMPTY);
         }
         if (!StringUtils.hasText(originalFileName)) {
-            throw new IllegalArgumentException("원본 파일명이 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILENAME_EMPTY);
         }
         if (!StringUtils.hasText(contentType)) {
-            throw new IllegalArgumentException("파일 형식 정보가 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_CONTENT_TYPE_EMPTY);
         }
         if (fileSize <= 0L) {
-            throw new IllegalArgumentException("파일 크기가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_SIZE_INVALID);
         }
         if (fileSize > MAX_UPLOAD_SIZE) {
-            throw new IllegalArgumentException("파일 사이즈 제한 50MB");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_SIZE_MAX);
         }
 
         String normalizedMimeType = normalizeMimeType(contentType);
@@ -124,42 +126,42 @@ public class UploadPolicyValidator {
 
     private void validateBoardContext(UploadInitContext context) {
         if (context == null) {
-            throw new IllegalArgumentException("게시판 이미지 업로드 컨텍스트가 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_BOARD_CONTEXT_EMPTY);
         }
         if (context.boardId() == null || context.boardId() <= 0L) {
-            throw new IllegalArgumentException("게시판 식별자가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_BOARD_ID_INVALID);
         }
         if (context.channel() == null) {
-            throw new IllegalArgumentException("게시판 이미지 업로드 채널이 비어있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_BOARD_CHANNEL_EMPTY);
         }
     }
 
     private void validateAttachment(String originalFileName, String normalizedMimeType) {
         String extension = normalizeExtension(resolveExtension(originalFileName));
         if (!StringUtils.hasText(extension)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
         if (BLOCKED_ATTACHMENT_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("업로드할 수 없는 확장자입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_EXTENSION_BLOCKED);
         }
         if (!ALLOWED_ATTACHMENT_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
 
         if (BLOCKED_ATTACHMENT_MIME_TYPES.contains(normalizedMimeType)) {
-            throw new IllegalArgumentException("업로드할 수 없는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_BLOCKED);
         }
         if ("application/octet-stream".equals(normalizedMimeType)) {
             return;
         }
         if (!ALLOWED_ATTACHMENT_MIME_TYPES.contains(normalizedMimeType)) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+            throw new ApiException(ErrorCode.UPLOAD_FILE_TYPE_NOT_ALLOWED);
         }
     }
 
     private void validateImageMimeType(String normalizedMimeType) {
         if (!normalizedMimeType.startsWith("image/")) {
-            throw new IllegalArgumentException("이미지 파일만 업로드할 수 있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_IMAGE_ONLY);
         }
     }
 
@@ -167,7 +169,7 @@ public class UploadPolicyValidator {
         if (!"video/mp4".equals(normalizedMimeType)
             && !"video/webm".equals(normalizedMimeType)
             && !"video/ogg".equals(normalizedMimeType)) {
-            throw new IllegalArgumentException("MP4, WebM 또는 Ogg 영상만 업로드할 수 있습니다.");
+            throw new ApiException(ErrorCode.UPLOAD_VIDEO_FORMAT_INVALID);
         }
     }
 

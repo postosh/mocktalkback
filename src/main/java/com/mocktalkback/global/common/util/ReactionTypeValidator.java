@@ -1,5 +1,7 @@
 package com.mocktalkback.global.common.util;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.Set;
 
 /**
@@ -19,11 +21,11 @@ public final class ReactionTypeValidator {
     }
 
     /**
-     * reactionType이 허용되지 않으면 IllegalArgumentException을 던진다.
+     * reactionType이 허용되지 않으면 ApiException을 던진다.
      */
     public static void validate(short reactionType) {
         if (!isValid(reactionType)) {
-            throw new IllegalArgumentException("invalid reaction_type: " + reactionType);
+            throw new ApiException(ErrorCode.REACTION_TYPE_INVALID, reactionType);
         }
     }
 }

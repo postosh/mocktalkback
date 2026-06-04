@@ -1,11 +1,11 @@
 package com.mocktalkback.domain.file.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 import java.util.Optional;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.file.dto.FileViewTicketResponse;
 import com.mocktalkback.domain.file.entity.FileEntity;
@@ -42,11 +42,11 @@ public class FileViewTicketService {
 
     public FileViewTicketResponse issue(Long fileId, String variantParam) {
         FileEntity file = fileRepository.findByIdAndDeletedAtIsNull(fileId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
 
         FileAccessDecision accessDecision = fileAccessDecisionService.decide(file);
         if (!accessDecision.allowed()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다.");
+            throw new ApiException(ErrorCode.FILE_NOT_FOUND);
         }
 
         if (accessDecision.deliveryMode() == FileDeliveryMode.PUBLIC) {
@@ -61,17 +61,17 @@ public class FileViewTicketService {
 
     public Duration validate(Long fileId, String ticket) {
         if (ticket == null || ticket.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다.");
+            throw new ApiException(ErrorCode.FILE_NOT_FOUND);
         }
 
         Optional<FileViewTicketStore.FileViewTicketState> ticketState = fileViewTicketStore.find(ticket);
         if (ticketState.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다.");
+            throw new ApiException(ErrorCode.FILE_NOT_FOUND);
         }
 
         FileViewTicketStore.FileViewTicketState state = ticketState.get();
         if (!state.fileId().equals(fileId) || state.remainingTtl().isZero() || state.remainingTtl().isNegative()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다.");
+            throw new ApiException(ErrorCode.FILE_NOT_FOUND);
         }
         return state.remainingTtl();
     }

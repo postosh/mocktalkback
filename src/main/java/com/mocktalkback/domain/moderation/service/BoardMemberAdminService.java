@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.moderation.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -7,10 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.board.entity.BoardEntity;
 import com.mocktalkback.domain.board.entity.BoardMemberEntity;
@@ -65,7 +65,7 @@ public class BoardMemberAdminService {
         boardAdminPermissionGuard.requireBoardAdmin(actor, member.getBoard());
 
         if (member.getBoardRole() != BoardRole.PENDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "승인 대기 상태가 아닙니다.");
+            throw new ApiException(ErrorCode.MEMBER_PENDING_APPROVAL_ONLY);
         }
         member.approve(actor);
         return BoardMemberListItemResponse.from(member);
@@ -78,7 +78,7 @@ public class BoardMemberAdminService {
         boardAdminPermissionGuard.requireBoardAdmin(actor, member.getBoard());
 
         if (member.getBoardRole() != BoardRole.PENDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "승인 대기 상태가 아닙니다.");
+            throw new ApiException(ErrorCode.MEMBER_PENDING_APPROVAL_ONLY);
         }
         boardMemberRepository.delete(member);
     }
@@ -91,10 +91,10 @@ public class BoardMemberAdminService {
         boardAdminPermissionGuard.ensureOwnerEditable(member, actor);
 
         if (targetRole != BoardRole.MEMBER && targetRole != BoardRole.MODERATOR) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "변경할 역할이 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.MEMBER_ROLE_INVALID);
         }
         if (member.getBoardRole() == BoardRole.PENDING || member.getBoardRole() == BoardRole.BANNED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "역할 변경 대상이 아닙니다.");
+            throw new ApiException(ErrorCode.MEMBER_ROLE_CHANGE_INVALID);
         }
         member.changeRole(targetRole, actor);
         return BoardMemberListItemResponse.from(member);
@@ -112,40 +112,40 @@ public class BoardMemberAdminService {
                 return BoardMemberListItemResponse.from(member);
             }
             if (member.getBoardRole() == BoardRole.PENDING) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "승인 대기 상태는 차단할 수 없습니다.");
+                throw new ApiException(ErrorCode.MEMBER_BLOCK_PENDING_INVALID);
             }
             member.changeRole(BoardRole.BANNED, actor);
             return BoardMemberListItemResponse.from(member);
         }
         if (targetRole == BoardRole.MEMBER) {
             if (member.getBoardRole() != BoardRole.BANNED) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "차단 상태만 해제할 수 있습니다.");
+                throw new ApiException(ErrorCode.MEMBER_UNBLOCK_INVALID);
             }
             member.changeRole(BoardRole.MEMBER, actor);
             return BoardMemberListItemResponse.from(member);
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "변경할 상태가 올바르지 않습니다.");
+        throw new ApiException(ErrorCode.MEMBER_STATUS_CHANGE_INVALID);
     }
 
     private BoardMemberEntity getBoardMember(Long boardId, Long memberId) {
         BoardEntity board = getBoard(boardId);
         BoardMemberEntity member = boardMemberRepository.findById(memberId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "멤버를 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_MEMBER_NOT_FOUND));
         if (!board.getId().equals(member.getBoard().getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "게시판 멤버가 아닙니다.");
+            throw new ApiException(ErrorCode.MEMBER_NOT_BOARD_MEMBER);
         }
         return member;
     }
 
     private BoardEntity getBoard(Long boardId) {
         return boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시판을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
         Long userId = currentUserService.getUserId();
         return userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private Pageable toPageable(int page, int size) {

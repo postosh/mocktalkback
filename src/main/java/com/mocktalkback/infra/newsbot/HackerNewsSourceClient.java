@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.newsbot;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +47,7 @@ public class HackerNewsSourceClient extends AbstractNewsSourceClient implements 
             return;
         }
         if (!List.of("topstories", "newstories", "beststories").contains(storyType)) {
-            throw new IllegalArgumentException("Hacker News storyType은 topstories, newstories, beststories 중 하나여야 합니다.");
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_UNSUPPORTED);
         }
     }
 
@@ -96,7 +98,7 @@ public class HackerNewsSourceClient extends AbstractNewsSourceClient implements 
             }
             return items;
         } catch (Exception exception) {
-            throw new IllegalArgumentException("Hacker News 데이터를 가져오지 못했습니다.", exception);
+            throw new ApiException(ErrorCode.NEWSBOT_SOURCE_READ_FAILED);
         }
     }
 

@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.stereotype.Service;
 
 import com.mocktalkback.domain.file.dto.FileResponse;
@@ -23,13 +25,13 @@ public class ArticleImportAssetStorageService {
 
     public FileResponse storeEditorAsset(Long ownerId, String originalFileName, byte[] bytes, String mimeType) {
         if (ownerId == null) {
-            throw new IllegalArgumentException("파일 소유자 식별자가 비어 있습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_OWNER_EMPTY);
         }
         if (bytes == null || bytes.length == 0) {
-            throw new IllegalArgumentException("업로드할 assets 바이트가 비어 있습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_ASSETS_EMPTY);
         }
         if (mimeType == null || mimeType.isBlank()) {
-            throw new IllegalArgumentException("업로드할 assets MIME 타입이 비어 있습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_ASSETS_MIME_EMPTY);
         }
 
         UploadPurpose purpose = mimeType.startsWith("image/")

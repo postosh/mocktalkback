@@ -38,7 +38,8 @@ import com.mocktalkback.global.auth.oauth2.OAuth2LoginFailureHandler;
 import com.mocktalkback.global.auth.oauth2.OAuth2LoginSuccessHandler;
 import com.mocktalkback.global.config.SecurityConfig;
 import jakarta.servlet.http.Cookie;
-import org.springframework.web.server.ResponseStatusException;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 @MocktalkWebMvcTest(controllers = AuthController.class)
 @Import({
@@ -170,7 +171,7 @@ class AuthControllerTest {
     void refresh_with_locked_user_returns_unauthorized_and_revokes() throws Exception {
         // Given: refresh 실패(잠김/비활성 등)
         when(authService.refresh("old-refresh"))
-                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+                .thenThrow(new ApiException(ErrorCode.COMMON_UNAUTHORIZED));
 
         // When: refresh API 호출
         var result = mockMvc.perform(post("/api/auth/refresh")

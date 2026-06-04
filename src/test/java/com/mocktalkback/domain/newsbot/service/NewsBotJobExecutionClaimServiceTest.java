@@ -10,7 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 import com.mocktalkback.domain.newsbot.config.NewsBotProperties;
 import com.mocktalkback.domain.newsbot.repository.NewsCollectionJobRepository;
@@ -45,8 +46,9 @@ class NewsBotJobExecutionClaimServiceTest {
 
         // When & Then: 이미 실행 중인 잡이면 충돌이어야 한다.
         assertThatThrownBy(() -> service.claimManualRun(1L, startedAt))
-            .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("409 CONFLICT");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.NEWSBOT_JOB_ALREADY_RUNNING);
         verify(newsCollectionJobRepository).existsById(1L);
     }
 
