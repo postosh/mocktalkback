@@ -66,8 +66,7 @@ class BoardAdminPermissionGuardTest {
 
         // When, Then: 권한 검사에서 예외가 발생해야 함
         assertThatThrownBy(() -> guard.requireBoardAdmin(actor, board))
-            .isInstanceOf(AccessDeniedException.class)
-            .hasMessageContaining("게시판 관리자 권한이 없습니다.");
+            .isInstanceOf(AccessDeniedException.class);
     }
 
     // OWNER 대상 역할 변경은 ADMIN이 아니면 차단되어야 한다.
@@ -81,8 +80,7 @@ class BoardAdminPermissionGuardTest {
 
         // When, Then: OWNER 수정 권한 검사에서 예외가 발생해야 함
         assertThatThrownBy(() -> guard.ensureOwnerEditable(ownerMember, actor))
-            .isInstanceOf(AccessDeniedException.class)
-            .hasMessageContaining("OWNER 권한은 변경할 수 없습니다.");
+            .isInstanceOf(AccessDeniedException.class);
     }
 
     private BoardEntity createBoard(Long id) {

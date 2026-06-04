@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.comment.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class CommentFileService {
     @Transactional(readOnly = true)
     public CommentFileResponse findById(Long id) {
         CommentFileEntity entity = commentFileRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("comment file not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_FILE_NOT_FOUND));
         return commentMapper.toResponse(entity);
     }
 
@@ -56,11 +58,11 @@ public class CommentFileService {
 
     private FileEntity getFile(Long fileId) {
         return fileRepository.findById(fileId)
-            .orElseThrow(() -> new IllegalArgumentException("file not found: " + fileId));
+            .orElseThrow(() -> new ApiException(ErrorCode.FILE_NOT_FOUND));
     }
 
     private CommentEntity getComment(Long commentId) {
         return commentRepository.findById(commentId)
-            .orElseThrow(() -> new IllegalArgumentException("comment not found: " + commentId));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
     }
 }

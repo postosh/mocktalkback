@@ -38,6 +38,8 @@ import com.mocktalkback.domain.user.entity.UserEntity;
 import com.mocktalkback.domain.user.entity.UserFileEntity;
 import com.mocktalkback.domain.user.repository.UserFileRepository;
 import com.mocktalkback.domain.user.repository.UserRepository;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import com.mocktalkback.global.auth.CurrentUserService;
 import com.mocktalkback.global.common.dto.PageResponse;
 
@@ -102,10 +104,10 @@ public class UserService {
         requireMaxLength(handle, 24, "핸들");
 
         if (!email.equals(user.getEmail()) && userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
+            throw new ApiException(ErrorCode.USER_EMAIL_ALREADY_EXISTS);
         }
         if (!handle.equals(user.getHandle()) && userRepository.existsByHandle(handle)) {
-            throw new IllegalArgumentException("이미 사용 중인 핸들입니다.");
+            throw new ApiException(ErrorCode.USER_HANDLE_ALREADY_EXISTS);
         }
 
         user.updateProfile(userName, displayName, handle);
@@ -131,7 +133,7 @@ public class UserService {
     public void deleteMyAccount(UserDeleteRequest request) {
         String confirmText = normalizeRequired(request.confirmText(), "재확인 문구");
         if (!"탈퇴".equals(confirmText)) {
-            throw new IllegalArgumentException("재확인 문구가 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.USER_DELETE_CONFIRM_INVALID);
         }
         Long userId = currentUserService.getUserId();
         UserEntity user = getUser(userId);
@@ -276,7 +278,7 @@ public class UserService {
 
     private String normalizeRequired(String value, String fieldName) {
         if (!StringUtils.hasText(value)) {
-            throw new IllegalArgumentException(fieldName + "을(를) 입력해주세요.");
+            throw new ApiException(ErrorCode.USER_FIELD_REQUIRED, fieldName);
         }
         return value.trim();
     }
@@ -290,19 +292,19 @@ public class UserService {
 
     private void requireMaxLength(String value, int max, String fieldName) {
         if (value.length() > max) {
-            throw new IllegalArgumentException(fieldName + "은 " + max + "자 이하이어야 합니다.");
+            throw new ApiException(ErrorCode.USER_FIELD_MAX_LENGTH, fieldName, max);
         }
     }
 
     private void updatePassword(UserEntity user, String rawPassword) {
         if (rawPassword.length() < 8 || rawPassword.length() > 64) {
-            throw new IllegalArgumentException("비밀번호는 8~64자 사이여야 합니다.");
+            throw new ApiException(ErrorCode.USER_PASSWORD_LENGTH);
         }
         user.changePassword(passwordEncoder.encode(rawPassword));
     }
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 }

@@ -27,7 +27,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.server.ResponseStatusException;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 import com.mocktalkback.domain.article.dto.ArticleCategoryResponse;
 import com.mocktalkback.domain.article.dto.ArticleCreateRequest;
@@ -240,8 +241,9 @@ class ArticleServiceTest {
 
         // When & Then: 소속 불일치 예외 확인
         assertThatThrownBy(() -> articleService.create(request))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("게시판 카테고리가 아닙니다.");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.BOARD_CATEGORY_INVALID);
     }
 
     // 게시글 생성 시 게시판 작성 정책이 MEMBER면 비멤버는 차단되어야 한다.
@@ -269,8 +271,7 @@ class ArticleServiceTest {
 
         // When & Then: 비멤버 작성 차단 예외 확인
         assertThatThrownBy(() -> articleService.create(request))
-            .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
-            .hasMessage("게시글 작성 권한이 없습니다.");
+            .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
     }
 
     // 게시글 수정 시 신규 파일은 매핑하고 제거된 파일은 임시 처리해야 한다.
@@ -508,8 +509,9 @@ class ArticleServiceTest {
 
         // When & Then: 동시 필터 사용 예외 확인
         assertThatThrownBy(() -> articleService.getBoardArticles(1L, 0, 10, SortOrder.LATEST, 3L, true))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("categoryId와 uncategorized=true를 동시에 사용할 수 없습니다.");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.ARTICLE_CATEGORY_FILTER_CONFLICT);
     }
 
     // 홈 최근 공개 게시글 조회는 공개 게시글 요약 응답을 반환해야 한다.
@@ -655,8 +657,9 @@ class ArticleServiceTest {
 
         // When & Then: 첨부 타입이 아니면 404 예외가 발생한다.
         assertThatThrownBy(() -> articleService.resolveAttachmentDownloadLocation(10L, 20L))
-            .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("404 NOT_FOUND");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.ATTACHMENT_NOT_FOUND);
     }
 
     private BoardEntity createBoard(Long id) {

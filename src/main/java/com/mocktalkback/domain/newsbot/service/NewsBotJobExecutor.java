@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import com.mocktalkback.domain.newsbot.dto.AdminNewsBotJobRunResponse;
 import com.mocktalkback.domain.newsbot.entity.NewsCollectionJobEntity;
 import com.mocktalkback.domain.newsbot.repository.NewsCollectionJobRepository;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 @Service
 public class NewsBotJobExecutor {
@@ -65,7 +67,7 @@ public class NewsBotJobExecutor {
 
     private AdminNewsBotJobRunResponse execute(Long jobId, Instant startedAt) {
         NewsCollectionJobEntity job = newsCollectionJobRepository.findById(jobId)
-            .orElseThrow(() -> new IllegalArgumentException("뉴스봇 잡을 찾을 수 없습니다: " + jobId));
+            .orElseThrow(() -> new ApiException(ErrorCode.NEWSBOT_JOB_NOT_FOUND));
 
         java.util.List<NewsBotSourceItem> items;
         try {

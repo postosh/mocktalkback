@@ -19,12 +19,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.config.LocaleConfig;
+import com.mocktalkback.global.i18n.ApiMessageResolver;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @MocktalkWebMvcTest(controllers = TestExceptionController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({LocaleConfig.class, ApiMessageResolver.class, GlobalExceptionHandler.class})
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = "SERVER_PORT=0")
 class GlobalExceptionHandlerTest {
@@ -34,6 +36,25 @@ class GlobalExceptionHandlerTest {
 
     @Test
     // 요청 바디 검증 실패 시 공통 에러 응답을 반환해야 한다.
+    void method_argument_not_valid_returns_korean_field_errors_by_default() throws Exception {
+        mockMvc.perform(post("/test/validation")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details.fieldErrors[0].message").value("필수 항목입니다."));
+    }
+
+    @Test
+    void method_argument_not_valid_returns_english_field_errors_with_accept_language_en() throws Exception {
+        mockMvc.perform(post("/test/validation")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .header("Accept-Language", "en"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details.fieldErrors[0].message").value("must not be blank"));
+    }
+
+    @Test
     void method_argument_not_valid_returns_error_envelope() throws Exception {
         // Given
         MockHttpServletRequestBuilder request = post("/test/validation")
@@ -48,7 +69,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_BAD_REQUEST.getCode()))
-                .andExpect(jsonPath("$.error.reason").value(ErrorCode.COMMON_BAD_REQUEST.getDefaultMessage()))
+                .andExpect(jsonPath("$.error.reason").value("잘못된 요청입니다."))
                 .andExpect(jsonPath("$.error.path").value("/test/validation"))
                 .andExpect(jsonPath("$.error.details.fieldErrors").isArray())
                 .andExpect(jsonPath("$.error.timestamp", notNullValue()));
@@ -86,7 +107,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_BAD_REQUEST.getCode()))
-                .andExpect(jsonPath("$.error.reason").value("Invalid parameter: id"));
+                .andExpect(jsonPath("$.error.reason").value("잘못된 파라미터: id"));
     }
 
     @Test
@@ -139,6 +160,22 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void api_exception_returns_localized_reason_by_default() throws Exception {
+        mockMvc.perform(get("/test/api"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_BAD_REQUEST.getCode()))
+                .andExpect(jsonPath("$.error.reason").value("잘못된 요청입니다."));
+    }
+
+    @Test
+    void api_exception_returns_english_reason_with_accept_language_en() throws Exception {
+        mockMvc.perform(get("/test/api").header("Accept-Language", "en"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_BAD_REQUEST.getCode()))
+                .andExpect(jsonPath("$.error.reason").value("Invalid request."));
+    }
+
+    @Test
     // 잘못된 인자 예외는 400으로 매핑되어야 한다.
     void illegal_argument_returns_bad_request_reason() throws Exception {
         // Given
@@ -152,7 +189,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_BAD_REQUEST.getCode()))
-                .andExpect(jsonPath("$.error.reason").value("bad argument"));
+                .andExpect(jsonPath("$.error.reason").value("잘못된 요청입니다."));
     }
 
     @Test
@@ -187,28 +224,18 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_BAD_REQUEST.getCode()))
-                .andExpect(jsonPath("$.error.reason").value("Malformed request body"));
+                .andExpect(jsonPath("$.error.reason").value("요청 본문 형식이 올바르지 않습니다."));
     }
 
     @Test
-    // ResponseStatusException은 상태 코드 매핑을 유지해야 한다.
-    void response_status_exception_returns_mapped_code() throws Exception {
-        // Given
-        MockHttpServletRequestBuilder request = get("/test/status");
-
-        // When
-        ResultActions result = mockMvc.perform(request);
-
-        // Then
-        result
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_CONFLICT.getCode()))
-                .andExpect(jsonPath("$.error.reason").value("conflict"));
+    void unauthorized_returns_english_reason_with_accept_language_en() throws Exception {
+        mockMvc.perform(get("/test/auth").header("Accept-Language", "en"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value(ErrorCode.COMMON_UNAUTHORIZED.getCode()))
+                .andExpect(jsonPath("$.error.reason").value("Authentication required."));
     }
 
     @Test
-    // 업로드 용량 초과는 413으로 매핑되어야 한다.
     void max_upload_size_returns_payload_too_large() throws Exception {
         // Given
         MockHttpServletRequestBuilder request = get("/test/upload");

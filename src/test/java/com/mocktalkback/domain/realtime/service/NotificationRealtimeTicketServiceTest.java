@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import com.mocktalkback.domain.realtime.config.RealtimeRedisProperties;
 import com.mocktalkback.domain.realtime.dto.NotificationRealtimeTicketResponse;
 import com.mocktalkback.global.auth.ticket.TicketIdGenerator;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 
 class NotificationRealtimeTicketServiceTest {
 
@@ -73,9 +75,10 @@ class NotificationRealtimeTicketServiceTest {
         NotificationRealtimeTicketService service =
             new NotificationRealtimeTicketService(ticketStore, RealtimeRedisProperties.defaults(), ticketIdGenerator);
 
-        // When & Then: 잘못된 ticket 소비는 예외가 발생함
+        // When & Then: 잘못된 ticket 소비는 ApiException이 발생함
         assertThatThrownBy(() -> service.consume("missing-ticket"))
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("유효하지 않거나 만료된");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.NOTIFICATION_SSE_TICKET_INVALID);
     }
 }

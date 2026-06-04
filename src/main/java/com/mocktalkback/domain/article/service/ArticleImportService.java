@@ -15,13 +15,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.article.dto.ArticleCreateRequest;
 import com.mocktalkback.domain.article.dto.ArticleImportExecuteItemResponse;
@@ -44,6 +42,9 @@ import com.mocktalkback.domain.role.type.ContentVisibility;
 import com.mocktalkback.domain.user.entity.UserEntity;
 import com.mocktalkback.domain.user.repository.UserRepository;
 import com.mocktalkback.global.auth.CurrentUserService;
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
+import com.mocktalkback.global.i18n.ApiMessageResolver;
 
 import lombok.RequiredArgsConstructor;
 
@@ -75,6 +76,7 @@ public class ArticleImportService {
     private final UserRepository userRepository;
     private final BoardAccessPolicy boardAccessPolicy;
     private final CurrentUserService currentUserService;
+    private final ApiMessageResolver messageResolver;
 
     @Transactional(readOnly = true)
     public ArticleImportPreviewResponse preview(MultipartFile file, boolean autoCreateMissingCategories) {
@@ -469,7 +471,7 @@ public class ArticleImportService {
     ) {
         AssetValidationResult validation = validateAsset(rawPath, markdownPath, assetKind, zipEntries);
         if (validation.errorType() != AssetValidationError.NONE || validation.asset() == null) {
-            throw new IllegalArgumentException(validation.message());
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_VALIDATION_FAILED, validation.message());
         }
 
         UploadedAsset existing = uploadedAssets.get(validation.asset().resolvedPath());
@@ -484,7 +486,7 @@ public class ArticleImportService {
             validation.asset().mimeType()
         );
         if (fileResponse.id() == null) {
-            throw new IllegalStateException("업로드한 본문 assets의 fileId를 확인할 수 없습니다.");
+            throw new ApiException(ErrorCode.ARTICLE_IMPORT_ASSET_FILE_MISSING);
         }
 
         UploadedAsset uploadedAsset = new UploadedAsset(
@@ -540,7 +542,7 @@ public class ArticleImportService {
         }
 
         BoardEntity board = boardRepository.findByIdAndDeletedAtIsNull(boardId)
-            .orElseThrow(() -> new IllegalArgumentException("board not found: " + boardId));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
 
         try {
             ArticleCategoryEntity created = articleCategoryRepository.save(
@@ -560,14 +562,12 @@ public class ArticleImportService {
     private UserEntity getCurrentUser() {
         Long userId = currentUserService.getUserId();
         return userRepository.findByIdWithRoleAndDeletedAtIsNull(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private String resolveExecutionErrorMessage(RuntimeException exception) {
-        if (exception instanceof ResponseStatusException responseStatusException) {
-            return responseStatusException.getReason() == null
-                ? "게시글 생성에 실패했습니다."
-                : responseStatusException.getReason();
+        if (exception instanceof ApiException apiException) {
+            return messageResolver.resolve(apiException.getErrorCode(), apiException.getArgs());
         }
         String message = normalizeText(exception.getMessage());
         return message == null ? "게시글 생성에 실패했습니다." : message;
@@ -770,7 +770,7 @@ public class ArticleImportService {
             }
             if ("..".equals(segment)) {
                 if (segments.isEmpty()) {
-                    throw new IllegalArgumentException("zip 경로가 올바르지 않습니다: " + rawPath);
+                    throw new ApiException(ErrorCode.ARTICLE_IMPORT_ZIP_PATH_INVALID, rawPath);
                 }
                 segments.removeLast();
                 continue;

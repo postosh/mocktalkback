@@ -36,7 +36,7 @@ class SanctionGuardTest {
             .thenReturn(false);
 
         // When, Then: 제재 검사에서 예외가 없어야 함
-        assertThatCode(() -> sanctionGuard.requireNotSanctioned(user, board, "제재 상태입니다."))
+        assertThatCode(() -> sanctionGuard.requireNotSanctioned(user, board))
             .doesNotThrowAnyException();
     }
 
@@ -51,9 +51,8 @@ class SanctionGuardTest {
             .thenReturn(true);
 
         // When, Then: 제재 검사에서 접근 거부 예외가 발생해야 함
-        assertThatThrownBy(() -> sanctionGuard.requireNotSanctioned(user, board, "제재 상태입니다."))
-            .isInstanceOf(AccessDeniedException.class)
-            .hasMessageContaining("제재 상태입니다.");
+        assertThatThrownBy(() -> sanctionGuard.requireNotSanctioned(user, board))
+            .isInstanceOf(AccessDeniedException.class);
     }
 
     private UserEntity createUser(Long id) {

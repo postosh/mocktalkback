@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.realtime.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.time.Duration;
 
 import org.springframework.stereotype.Service;
@@ -34,12 +36,12 @@ public class NotificationRealtimeTicketService {
 
     public Long consume(String ticket) {
         if (ticket == null || ticket.isBlank()) {
-            throw new IllegalArgumentException("알림 SSE ticket 값이 비어 있습니다.");
+            throw new ApiException(ErrorCode.NOTIFICATION_SSE_TICKET_EMPTY);
         }
 
         Long userId = notificationRealtimeTicketStore.consume(ticket);
         if (userId == null) {
-            throw new IllegalStateException("유효하지 않거나 만료된 알림 SSE ticket 입니다.");
+            throw new ApiException(ErrorCode.NOTIFICATION_SSE_TICKET_INVALID);
         }
         return userId;
     }

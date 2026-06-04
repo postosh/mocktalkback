@@ -19,11 +19,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.global.common.dto.ApiEnvelope;
 import com.mocktalkback.global.common.dto.ApiError;
 import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
+import com.mocktalkback.global.i18n.ApiMessageResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -34,91 +35,90 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 요청 바디 Bean Validation(@Valid) 검증 실패 처리.
+    private static final String KEY_PARAM_INVALID = "error.param.invalid";
+    private static final String KEY_HTTP_METHOD_NOT_SUPPORTED = "error.http_method_not_supported";
+    private static final String KEY_REQUEST_BODY_MALFORMED = "error.request_body_malformed";
+    private static final String KEY_UPLOAD_MAX_SIZE = "error.upload.max_size";
+
+    private final ApiMessageResolver messageResolver;
+
+    public GlobalExceptionHandler(ApiMessageResolver messageResolver) {
+        this.messageResolver = messageResolver;
+    }
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiEnvelope<Void>> handleApiException(ApiException ex, HttpServletRequest request) {
+        return buildError(ex.getErrorCode(), request, null, null, ex.getArgs());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request) {
         Map<String, Object> details = extractFieldErrorDetails(ex.getBindingResult());
         return buildError(ErrorCode.COMMON_BAD_REQUEST, request, null, details);
     }
 
-    // 파라미터/경로/쿼리 @Validated 검증 실패 처리.
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         Map<String, Object> details = extractConstraintViolationDetails(ex.getConstraintViolations());
         return buildError(ErrorCode.COMMON_BAD_REQUEST, request, null, details);
     }
 
-    // 경로/쿼리 파라미터 타입 불일치 처리.
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        String message = "Invalid parameter: " + ex.getName();
-        return buildError(ErrorCode.COMMON_BAD_REQUEST, request, message, null);
+        String reason = messageResolver.resolveKey(KEY_PARAM_INVALID, ex.getName());
+        return buildError(ErrorCode.COMMON_BAD_REQUEST, request, reason, null);
     }
 
-    // 잘못된 JSON 등 요청 바디 파싱 실패 처리.
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        return buildError(ErrorCode.COMMON_BAD_REQUEST, request, "Malformed request body", null);
+        String reason = messageResolver.resolveKey(KEY_REQUEST_BODY_MALFORMED);
+        return buildError(ErrorCode.COMMON_BAD_REQUEST, request, reason, null);
     }
 
-    // 지원하지 않는 HTTP 메서드 요청 처리.
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        String message = "지원하지 않는 HTTP 메서드입니다: " + ex.getMethod();
-        return buildError(ErrorCode.COMMON_METHOD_NOT_ALLOWED, request, message, null);
+        String reason = messageResolver.resolveKey(KEY_HTTP_METHOD_NOT_SUPPORTED, ex.getMethod());
+        return buildError(ErrorCode.COMMON_METHOD_NOT_ALLOWED, request, reason, null);
     }
 
-    // 인증 실패(미인증) 처리.
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
         return buildError(ErrorCode.COMMON_UNAUTHORIZED, request, null, null);
     }
 
-    // 인가 실패(권한 부족) 처리.
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return buildError(ErrorCode.COMMON_FORBIDDEN, request, null, null);
     }
 
-    // 서비스/컨트롤러에서 발생한 잘못된 인자 처리.
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
-        return buildError(ErrorCode.COMMON_BAD_REQUEST, request, ex.getMessage(), null);
+        log.warn("Unexpected IllegalArgumentException: path={}, message={}", request.getRequestURI(), ex.getMessage());
+        return buildError(ErrorCode.COMMON_BAD_REQUEST, request, null, null);
     }
 
-    // 업로드 최대 용량 초과 처리.
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex, HttpServletRequest request) {
-        return buildError(ErrorCode.COMMON_PAYLOAD_TOO_LARGE, request, "파일 사이즈 제한 50MB", null);
+        String reason = messageResolver.resolveKey(KEY_UPLOAD_MAX_SIZE, 50);
+        return buildError(ErrorCode.COMMON_PAYLOAD_TOO_LARGE, request, reason, null);
     }
 
-    // 데이터 무결성 위반(중복 등) 처리.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiEnvelope<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
-        String reason = resolveDataIntegrityReason(ex);
+        String reasonKey = resolveDataIntegrityReasonKey(ex);
+        String reason = messageResolver.resolveKey(reasonKey);
         return buildError(ErrorCode.COMMON_CONFLICT, request, reason, null);
     }
 
-    // 처리되지 않은 모든 예외의 최종 처리.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiEnvelope<Void>> handleException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception", ex);
         return buildError(ErrorCode.COMMON_INTERNAL_ERROR, request, null, null);
     }
 
-    // SSE 연결이 끊긴 뒤 flush/complete 과정에서 발생하는 비동기 응답 예외는 무해하게 종료한다.
     @ExceptionHandler(AsyncRequestNotUsableException.class)
     public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException ex, HttpServletRequest request) {
         log.debug("Async request already closed: path={}, message={}", request.getRequestURI(), ex.getMessage());
-    }
-
-    // ResponseStatusException을 상태 코드 그대로 응답.
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ApiEnvelope<Void>> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
-        ErrorCode errorCode = resolveErrorCode(ex.getStatusCode().value());
-        ApiError error = ApiError.of(errorCode, ex.getReason(), request.getRequestURI(), null);
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(ApiEnvelope.fail(error));
     }
 
     private Map<String, Object> extractFieldErrorDetails(BindingResult result) {
@@ -132,9 +132,7 @@ public class GlobalExceptionHandler {
         return Map.of("fieldErrors", fieldErrors);
     }
 
-    private Map<String, Object> extractConstraintViolationDetails(
-            Set<ConstraintViolation<?>> violations
-    ) {
+    private Map<String, Object> extractConstraintViolationDetails(Set<ConstraintViolation<?>> violations) {
         List<Map<String, String>> violationErrors = violations.stream()
                 .map(v -> Map.of(
                         "field", v.getPropertyPath().toString(),
@@ -144,48 +142,48 @@ public class GlobalExceptionHandler {
         return Map.of("violations", violationErrors);
     }
 
-    private ResponseEntity<ApiEnvelope<Void>> buildError(ErrorCode errorCode, HttpServletRequest request, String reason, Map<String, Object> details) {
+    private ResponseEntity<ApiEnvelope<Void>> buildError(
+            ErrorCode errorCode,
+            HttpServletRequest request,
+            String reason,
+            Map<String, Object> details
+    ) {
+        return buildError(errorCode, request, reason, details, new Object[0]);
+    }
+
+    private ResponseEntity<ApiEnvelope<Void>> buildError(
+            ErrorCode errorCode,
+            HttpServletRequest request,
+            String reason,
+            Map<String, Object> details,
+            Object[] args
+    ) {
         String path = request != null ? request.getRequestURI() : "";
-        ApiError error = ApiError.of(errorCode, reason, path, details);
+        ApiError error = messageResolver.toApiError(errorCode, reason, path, details, args);
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(ApiEnvelope.fail(error));
     }
 
-    private String resolveDataIntegrityReason(DataIntegrityViolationException ex) {
+    private String resolveDataIntegrityReasonKey(DataIntegrityViolationException ex) {
         String message = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
         if (message == null) {
-            return "중복된 값이 있습니다.";
+            return "error.duplicate.generic";
         }
         if (message.contains("uq_tb_boards_slug")) {
-            return "이미 사용 중인 슬러그입니다.";
+            return "error.duplicate.slug";
         }
         if (message.contains("uq_tb_boards_board_name")) {
-            return "이미 사용 중인 게시판명입니다.";
+            return "error.duplicate.board_name";
         }
         if (message.contains("uq_tb_users_login_id")) {
-            return "이미 사용 중인 로그인 ID입니다.";
+            return "error.duplicate.login_id";
         }
         if (message.contains("uq_tb_users_email")) {
-            return "이미 사용 중인 이메일입니다.";
+            return "error.duplicate.email";
         }
         if (message.contains("uq_tb_users_handle")) {
-            return "이미 사용 중인 핸들입니다.";
+            return "error.duplicate.handle";
         }
-        return "중복된 값이 있습니다.";
+        return "error.duplicate.generic";
     }
-
-    private ErrorCode resolveErrorCode(int statusCode) {
-        return switch (statusCode) {
-            case 400 -> ErrorCode.COMMON_BAD_REQUEST;
-            case 401 -> ErrorCode.COMMON_UNAUTHORIZED;
-            case 403 -> ErrorCode.COMMON_FORBIDDEN;
-            case 404 -> ErrorCode.COMMON_NOT_FOUND;
-            case 405 -> ErrorCode.COMMON_METHOD_NOT_ALLOWED;
-            case 409 -> ErrorCode.COMMON_CONFLICT;
-            case 429 -> ErrorCode.COMMON_TOO_MANY_REQUESTS;
-            case 413 -> ErrorCode.COMMON_PAYLOAD_TOO_LARGE;
-            default -> ErrorCode.COMMON_INTERNAL_ERROR;
-        };
-    }
-
 }

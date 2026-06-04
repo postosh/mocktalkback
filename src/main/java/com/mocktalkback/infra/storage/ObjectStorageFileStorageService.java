@@ -1,5 +1,7 @@
 package com.mocktalkback.infra.storage;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
@@ -59,7 +61,7 @@ public class ObjectStorageFileStorageService implements FileStorage {
     @Override
     public void write(String storageKey, byte[] bytes, String mimeType) {
         if (bytes == null) {
-            throw new IllegalArgumentException("저장할 파일 바이트가 비어있습니다.");
+            throw new ApiException(ErrorCode.FILE_BYTES_EMPTY);
         }
         String normalizedKey = normalizeKey(storageKey);
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
@@ -310,14 +312,14 @@ public class ObjectStorageFileStorageService implements FileStorage {
 
     private String normalizeKey(String storageKey) {
         if (!StringUtils.hasText(storageKey)) {
-            throw new IllegalArgumentException("저장소 키가 비어있습니다.");
+            throw new ApiException(ErrorCode.STORAGE_KEY_EMPTY);
         }
         String normalized = storageKey.trim().replace('\\', '/');
         if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
             URI uri = URI.create(normalized);
             String path = uri.getPath();
             if (!StringUtils.hasText(path)) {
-                throw new IllegalArgumentException("저장소 키 경로가 비어있습니다.");
+                throw new ApiException(ErrorCode.STORAGE_KEY_PATH_EMPTY);
             }
             normalized = path;
         }
@@ -327,7 +329,7 @@ public class ObjectStorageFileStorageService implements FileStorage {
             normalized = normalized.substring(bucketPrefix.length());
         }
         if (!StringUtils.hasText(normalized)) {
-            throw new IllegalArgumentException("저장소 키 경로가 비어있습니다.");
+            throw new ApiException(ErrorCode.STORAGE_KEY_PATH_EMPTY);
         }
         return normalized;
     }

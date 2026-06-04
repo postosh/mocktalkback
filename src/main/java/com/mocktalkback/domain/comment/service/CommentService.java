@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.comment.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -12,11 +14,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.article.entity.ArticleEntity;
 import com.mocktalkback.domain.article.repository.ArticleRepository;
@@ -79,7 +79,7 @@ public class CommentService {
     public CommentTreeResponse createRoot(Long articleId, CommentCreateRequest request) {
         UserEntity user = getCurrentUser();
         ArticleEntity article = getAccessibleArticle(articleId, user);
-        sanctionGuard.requireNotSanctioned(user, article.getBoard(), "제재 상태라 댓글을 작성할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, article.getBoard());
         String content = normalizeContent(request.content());
 
         CommentEntity entity = CommentEntity.builder()
@@ -105,10 +105,10 @@ public class CommentService {
     public CommentTreeResponse createReply(Long articleId, Long parentCommentId, CommentCreateRequest request) {
         UserEntity user = getCurrentUser();
         ArticleEntity article = getAccessibleArticle(articleId, user);
-        sanctionGuard.requireNotSanctioned(user, article.getBoard(), "제재 상태라 댓글을 작성할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, article.getBoard());
         CommentEntity parent = getComment(parentCommentId);
         if (!parent.getArticle().getId().equals(article.getId())) {
-            throw new IllegalArgumentException("댓글이 다른 게시글에 속해 있습니다.");
+            throw new ApiException(ErrorCode.COMMENT_WRONG_ARTICLE);
         }
 
         CommentEntity root = resolveRootComment(parent);
@@ -212,21 +212,21 @@ public class CommentService {
     @Transactional
     public CommentReactionSummaryResponse toggleReaction(Long commentId, CommentReactionToggleRequest request) {
         if (request.reactionType() == null) {
-            throw new IllegalArgumentException("reactionType은 필수입니다.");
+            throw new ApiException(ErrorCode.REACTION_TYPE_REQUIRED);
         }
         short reactionType = request.reactionType();
         ReactionTypeValidator.validate(reactionType);
         if (reactionType == 0) {
-            throw new IllegalArgumentException("reactionType은 -1 또는 1만 허용됩니다.");
+            throw new ApiException(ErrorCode.REACTION_TYPE_INVALID);
         }
 
         UserEntity user = getCurrentUser();
         CommentEntity comment = getComment(commentId);
         if (comment.isDeleted()) {
-            throw new IllegalArgumentException("삭제된 댓글에는 반응할 수 없습니다.");
+            throw new ApiException(ErrorCode.COMMENT_DELETED_NO_REACTION);
         }
         getAccessibleArticle(comment.getArticle().getId(), user);
-        sanctionGuard.requireNotSanctioned(user, comment.getArticle().getBoard(), "제재 상태라 댓글에 반응할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, comment.getArticle().getBoard());
 
         short myReaction = commentReactionRepository.upsertToggleReaction(
             user.getId(),
@@ -249,9 +249,9 @@ public class CommentService {
         CommentEntity entity = getComment(id);
         UserEntity user = getCurrentUser();
         if (entity.isDeleted()) {
-            throw new IllegalArgumentException("삭제된 댓글은 수정할 수 없습니다.");
+            throw new ApiException(ErrorCode.COMMENT_DELETED_NO_EDIT);
         }
-        sanctionGuard.requireNotSanctioned(user, entity.getArticle().getBoard(), "제재 상태라 댓글을 수정할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, entity.getArticle().getBoard());
         requireOwnership(user, entity);
         entity.updateContent(normalizeContent(request.content()));
         long syncVersion = articleSyncVersionService.increaseAndGet(entity.getArticle().getId());
@@ -264,7 +264,7 @@ public class CommentService {
     public void delete(Long id) {
         CommentEntity entity = getComment(id);
         UserEntity user = getCurrentUser();
-        sanctionGuard.requireNotSanctioned(user, entity.getArticle().getBoard(), "제재 상태라 댓글을 삭제할 수 없습니다.");
+        sanctionGuard.requireNotSanctioned(user, entity.getArticle().getBoard());
         requireOwnership(user, entity);
         if (!entity.isDeleted()) {
             entity.softDelete();
@@ -280,7 +280,7 @@ public class CommentService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private UserEntity getCurrentUser() {
@@ -294,12 +294,12 @@ public class CommentService {
 
     private CommentEntity getComment(Long commentId) {
         return commentRepository.findById(commentId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "comment not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
     private ArticleEntity getAccessibleArticle(Long articleId, UserEntity currentUser) {
         ArticleEntity article = articleRepository.findByIdAndDeletedAtIsNull(articleId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "article not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
         BoardEntity board = article.getBoard();
 
         UserEntity user = currentUser;
@@ -312,11 +312,11 @@ public class CommentService {
             : boardMemberRepository.findByUserIdAndBoardId(user.getId(), board.getId()).orElse(null);
 
         if (!boardAccessPolicy.canAccessBoard(board, user, member)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
         EnumSet<ContentVisibility> allowed = boardAccessPolicy.resolveAllowedVisibilities(board, user, member);
         if (!allowed.contains(article.getVisibility())) {
-            throw new AccessDeniedException("댓글 조회 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
         return article;
     }
@@ -362,12 +362,12 @@ public class CommentService {
         if (boardAccessPolicy.isManagerOrAdmin(user)) {
             return;
         }
-        throw new AccessDeniedException("댓글 수정/삭제 권한이 없습니다.");
+        throw new AccessDeniedException("Access Denied");
     }
 
     private String normalizeContent(String content) {
         if (content == null || content.trim().isEmpty()) {
-            throw new IllegalArgumentException("댓글 내용을 입력해주세요.");
+            throw new ApiException(ErrorCode.COMMENT_CONTENT_REQUIRED);
         }
         return content.trim();
     }

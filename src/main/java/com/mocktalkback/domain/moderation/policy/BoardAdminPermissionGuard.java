@@ -16,8 +16,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BoardAdminPermissionGuard {
 
-    private static final String DEFAULT_BOARD_ADMIN_ERROR = "게시판 관리자 권한이 없습니다.";
-
     private final BoardMemberRepository boardMemberRepository;
     private final RoleEvaluator roleEvaluator;
 
@@ -28,17 +26,17 @@ public class BoardAdminPermissionGuard {
         BoardMemberEntity member = boardMemberRepository.findByUserIdAndBoardId(actor.getId(), board.getId())
             .orElse(null);
         if (member == null) {
-            throw new AccessDeniedException(DEFAULT_BOARD_ADMIN_ERROR);
+            throw new AccessDeniedException("Access Denied");
         }
         BoardRole role = member.getBoardRole();
         if (role != BoardRole.OWNER && role != BoardRole.MODERATOR) {
-            throw new AccessDeniedException(DEFAULT_BOARD_ADMIN_ERROR);
+            throw new AccessDeniedException("Access Denied");
         }
     }
 
     public void ensureOwnerEditable(BoardMemberEntity member, UserEntity actor) {
         if (member.getBoardRole() == BoardRole.OWNER && !roleEvaluator.isAdmin(actor)) {
-            throw new AccessDeniedException("OWNER 권한은 변경할 수 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
     }
 }

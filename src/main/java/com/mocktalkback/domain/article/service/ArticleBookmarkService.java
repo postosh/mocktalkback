@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.article.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +68,7 @@ public class ArticleBookmarkService {
     @Transactional(readOnly = true)
     public ArticleBookmarkResponse findById(Long id) {
         ArticleBookmarkEntity entity = articleBookmarkRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("article bookmark not found: " + id));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_BOOKMARK_NOT_FOUND));
         return articleMapper.toResponse(entity);
     }
 
@@ -140,12 +142,12 @@ public class ArticleBookmarkService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private ArticleEntity getArticle(Long articleId) {
         return articleRepository.findById(articleId)
-            .orElseThrow(() -> new IllegalArgumentException("article not found: " + articleId));
+            .orElseThrow(() -> new ApiException(ErrorCode.ARTICLE_NOT_FOUND));
     }
 
     private Map<Long, Long> loadCommentCounts(List<ArticleEntity> articles) {

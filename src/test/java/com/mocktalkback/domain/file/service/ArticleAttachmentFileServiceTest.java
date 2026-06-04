@@ -15,6 +15,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import com.mocktalkback.domain.file.dto.FileResponse;
 import com.mocktalkback.domain.file.entity.FileClassEntity;
 import com.mocktalkback.domain.file.entity.FileEntity;
@@ -110,7 +112,8 @@ class ArticleAttachmentFileServiceTest {
 
         // when & then
         assertThatThrownBy(() -> articleAttachmentFileService.completeArticleAttachmentFileUpload(storedFile, false))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("업로드할 수 없는 확장자");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.UPLOAD_EXTENSION_BLOCKED);
     }
 }

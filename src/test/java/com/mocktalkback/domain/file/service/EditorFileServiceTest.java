@@ -15,6 +15,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import com.mocktalkback.domain.file.dto.FileResponse;
 import com.mocktalkback.domain.file.entity.FileClassEntity;
 import com.mocktalkback.domain.file.entity.FileEntity;
@@ -110,7 +112,8 @@ class EditorFileServiceTest {
 
         // when & then
         assertThatThrownBy(() -> editorFileService.completeEditorFileUpload(storedFile, false))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("이미지 또는 MP4/WebM");
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.EDITOR_MEDIA_TYPE_INVALID);
     }
 }

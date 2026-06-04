@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.file.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,7 +54,7 @@ public class ImageOptimizationService {
 
     public OriginalFileResult processOriginal(StoredFile storedFile, boolean preserveMetadata) {
         if (storedFile == null) {
-            throw new IllegalArgumentException("저장된 파일 정보가 비어있습니다.");
+            throw new ApiException(ErrorCode.FILE_SAVED_INFO_EMPTY);
         }
         String mimeType = storedFile.mimeType();
         if (!isImage(mimeType)) {
@@ -296,7 +298,7 @@ public class ImageOptimizationService {
 
     private String buildVariantStorageKey(String originalStorageKey, FileVariantCode variantCode) {
         if (originalStorageKey == null || originalStorageKey.isBlank()) {
-            throw new IllegalArgumentException("원본 저장 경로가 비어있습니다.");
+            throw new ApiException(ErrorCode.FILE_ORIGINAL_PATH_EMPTY);
         }
         String normalized = originalStorageKey.replace('\\', '/');
         int slashIndex = normalized.lastIndexOf('/');

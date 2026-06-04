@@ -9,6 +9,9 @@ import java.lang.annotation.Target;
 
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.context.annotation.Import;
+import com.mocktalkback.global.config.LocaleConfig;
+import com.mocktalkback.global.i18n.ApiMessageResolver;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.core.annotation.AliasFor;
@@ -23,6 +26,7 @@ import org.springframework.test.context.TestPropertySource;
 @Inherited
 @WebMvcTest(excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@Import({LocaleConfig.class, ApiMessageResolver.class})
 @TestPropertySource(properties = {
     "spring.autoconfigure.exclude=org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration"
 })

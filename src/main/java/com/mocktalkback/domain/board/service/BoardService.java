@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.board.service;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,11 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.mocktalkback.domain.board.dto.BoardCreateRequest;
 import com.mocktalkback.domain.board.dto.BoardDetailResponse;
@@ -98,7 +98,7 @@ public class BoardService {
         UserEntity user = getUser(userId);
         int requiredPoint = Math.abs(ActivityPointPolicy.CREATE_BOARD.delta);
         if (user.getUserPoint() < requiredPoint) {
-            throw new IllegalArgumentException("포인트가 부족합니다.");
+            throw new ApiException(ErrorCode.BOARD_INSUFFICIENT_POINTS);
         }
 
         BoardEntity entity = boardMapper.toEntity(request);
@@ -276,14 +276,14 @@ public class BoardService {
         UserEntity user = getUser(userId);
         BoardEntity board = getBoard(boardId);
         if (!canReadBoard(board, user, userId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
         BoardMemberEntity member = boardMemberRepository.findByUserIdAndBoardId(userId, boardId).orElse(null);
         if (member != null && member.getBoardRole() == BoardRole.BANNED) {
-            throw new AccessDeniedException("구독 권한이 없습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
         if (boardSubscribeRepository.existsByUserIdAndBoardId(userId, boardId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 구독 중입니다.");
+            throw new ApiException(ErrorCode.BOARD_ALREADY_SUBSCRIBED);
         }
         BoardSubscribeEntity entity = BoardSubscribeEntity.builder()
             .user(user)
@@ -310,23 +310,23 @@ public class BoardService {
         BoardEntity board = getBoard(boardId);
 
         if (!canReadBoard(board, user, userId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
 
         if (board.getVisibility() == BoardVisibility.PRIVATE || board.getVisibility() == BoardVisibility.UNLISTED) {
-            throw new AccessDeniedException("가입 요청이 허용되지 않습니다.");
+            throw new AccessDeniedException("Access Denied");
         }
 
         BoardMemberEntity existing = boardMemberRepository.findByUserIdAndBoardId(userId, boardId).orElse(null);
         if (existing != null) {
             if (existing.getBoardRole() == BoardRole.BANNED) {
-                throw new AccessDeniedException("가입 요청이 제한된 사용자입니다.");
+                throw new AccessDeniedException("Access Denied");
             }
             if (existing.getBoardRole() == BoardRole.PENDING) {
                 boardMemberRepository.delete(existing);
                 return new BoardMemberStatusResponse(boardId, null);
             }
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 가입된 사용자입니다.");
+            throw new ApiException(ErrorCode.BOARD_MEMBER_ALREADY_JOINED);
         }
 
         BoardMemberEntity member = BoardMemberEntity.builder()
@@ -351,7 +351,7 @@ public class BoardService {
         }
 
         BoardMemberEntity member = boardMemberRepository.findByUserIdAndBoardId(targetUserId, boardId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "member not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_MEMBER_NOT_FOUND));
         boardMemberRepository.delete(member);
     }
 
@@ -363,31 +363,31 @@ public class BoardService {
 
     private UserEntity getUser(Long userId) {
         return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+            .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
     private BoardEntity getBoard(Long id) {
         return boardRepository.findByIdAndDeletedAtIsNull(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private BoardEntity getBoardBySlug(String slug) {
         return boardRepository.findBySlugAndDeletedAtIsNull(slug)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found"));
+            .orElseThrow(() -> new ApiException(ErrorCode.BOARD_NOT_FOUND));
     }
 
     private BoardDetailResponse loadDetail(BoardEntity entity) {
         Long userId = currentUserService.getOptionalUserId().orElse(null);
         if (userId == null) {
             if (entity.getVisibility() != BoardVisibility.PUBLIC) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+                throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
             }
             return toDetailResponse(entity, null);
         }
 
         UserEntity user = getUser(userId);
         if (!canReadBoard(entity, user, userId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "board not found");
+            throw new ApiException(ErrorCode.BOARD_NOT_FOUND);
         }
         return toDetailResponse(entity, userId);
     }
@@ -531,12 +531,12 @@ public class BoardService {
     private void requireManagePermission(BoardEntity board, UserEntity user, Long userId) {
         BoardMemberEntity member = boardMemberRepository.findByUserIdAndBoardId(userId, board.getId())
             .orElse(null);
-        boardAccessPolicy.requireManagePermission(user, member, "게시판 관리 권한이 없습니다.");
+        boardAccessPolicy.requireManagePermission(user, member);
     }
 
     private void requireApprovePermission(BoardEntity board, UserEntity user, Long userId) {
         BoardMemberEntity member = boardMemberRepository.findByUserIdAndBoardId(userId, board.getId())
             .orElse(null);
-        boardAccessPolicy.requireApprovePermission(user, member, "가입 승인 권한이 없습니다.");
+        boardAccessPolicy.requireApprovePermission(user, member);
     }
 }

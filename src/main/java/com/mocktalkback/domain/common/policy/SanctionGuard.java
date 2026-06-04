@@ -18,7 +18,7 @@ public class SanctionGuard {
 
     private final SanctionRepository sanctionRepository;
 
-    public void requireNotSanctioned(UserEntity user, BoardEntity board, String message) {
+    public void requireNotSanctioned(UserEntity user, BoardEntity board) {
         Instant now = Instant.now();
         boolean sanctioned = sanctionRepository.existsActiveSanction(
             user.getId(),
@@ -28,7 +28,7 @@ public class SanctionGuard {
             now
         );
         if (sanctioned) {
-            throw new AccessDeniedException(message);
+            throw new AccessDeniedException("Access Denied");
         }
     }
 }

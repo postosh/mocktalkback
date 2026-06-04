@@ -1,5 +1,7 @@
 package com.mocktalkback.domain.common.policy;
 
+import com.mocktalkback.global.common.dto.ErrorCode;
+import com.mocktalkback.global.i18n.ApiException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -7,7 +9,7 @@ public class PageNormalizer {
 
     public int normalizePage(int page) {
         if (page < 0) {
-            throw new IllegalArgumentException("page는 0 이상이어야 합니다.");
+            throw new ApiException(ErrorCode.PAGE_INVALID);
         }
         return page;
     }
@@ -19,7 +21,7 @@ public class PageNormalizer {
 
     public int normalizeSize(int size, int maxPageSize) {
         if (size <= 0 || size > maxPageSize) {
-            throw new IllegalArgumentException("size는 1~" + maxPageSize + " 사이여야 합니다.");
+            throw new ApiException(ErrorCode.PAGE_SIZE_INVALID, maxPageSize);
         }
         return size;
     }
