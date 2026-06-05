@@ -18,6 +18,7 @@ public class LocaleConfig {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
         messageSource.setBasenames("classpath:messages", "classpath:ValidationMessages");
         messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setDefaultLocale(Locale.KOREAN);
         messageSource.setFallbackToSystemLocale(false);
         return messageSource;
     }

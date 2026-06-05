@@ -16,6 +16,7 @@ public class ObjectStorageProperties {
     private String presignEndpoint;
     private long presignExpireSeconds = 300L;
     private long protectedViewExpireSeconds = 120L;
+    private int viewTicketBatchMaxItems = 100;
     private String uploadProxyPrefix = "/storage";
 
     public String getEndpoint() {
@@ -104,6 +105,14 @@ public class ObjectStorageProperties {
 
     public void setProtectedViewExpireSeconds(long protectedViewExpireSeconds) {
         this.protectedViewExpireSeconds = protectedViewExpireSeconds;
+    }
+
+    public int getViewTicketBatchMaxItems() {
+        return viewTicketBatchMaxItems;
+    }
+
+    public void setViewTicketBatchMaxItems(int viewTicketBatchMaxItems) {
+        this.viewTicketBatchMaxItems = viewTicketBatchMaxItems;
     }
 
     public String getUploadProxyPrefix() {

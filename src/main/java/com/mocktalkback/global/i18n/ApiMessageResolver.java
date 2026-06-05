@@ -7,12 +7,15 @@ import java.util.Map;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import com.mocktalkback.global.common.dto.ApiError;
 import com.mocktalkback.global.common.dto.ErrorCode;
 
 @Component
 public class ApiMessageResolver {
+
+    private static final Locale DEFAULT_LOCALE = Locale.KOREAN;
 
     private final MessageSource messageSource;
 
@@ -25,8 +28,24 @@ public class ApiMessageResolver {
     }
 
     public String resolveKey(String key, Object... args) {
+        return messageSource.getMessage(key, args, key, resolveApiLocale());
+    }
+
+    private Locale resolveApiLocale() {
         Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(key, args, key, locale);
+        if (locale == null) {
+            return DEFAULT_LOCALE;
+        }
+        if (!"en".equalsIgnoreCase(locale.getLanguage())) {
+            return DEFAULT_LOCALE;
+        }
+        if (RequestContextHolder.getRequestAttributes() != null) {
+            return Locale.ENGLISH;
+        }
+        if (Locale.ENGLISH.equals(locale)) {
+            return Locale.ENGLISH;
+        }
+        return DEFAULT_LOCALE;
     }
 
     public ApiError toApiError(ErrorCode errorCode, String path) {

@@ -5,17 +5,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+
 import org.springframework.test.util.ReflectionTestUtils;
 import com.mocktalkback.global.common.dto.ErrorCode;
 import com.mocktalkback.global.i18n.ApiException;
 
+import com.mocktalkback.domain.file.dto.FileViewTicketBatchItemRequest;
+import com.mocktalkback.domain.file.dto.FileViewTicketBatchItemResponse;
+import com.mocktalkback.domain.file.dto.FileViewTicketBatchResponse;
 import com.mocktalkback.domain.file.dto.FileViewTicketResponse;
 import com.mocktalkback.domain.file.entity.FileClassEntity;
 import com.mocktalkback.domain.file.entity.FileEntity;
@@ -145,6 +151,93 @@ class FileViewTicketServiceTest {
 
         // then: 남은 TTL을 그대로 반환한다.
         assertThat(remainingTtl).isEqualTo(Duration.ofSeconds(87L));
+    }
+
+    // 배치 발급은 항목별 성공/실패를 반환하고 동일 fileId+variant는 ticket을 한 번만 저장해야 한다.
+    @Test
+    void issueBatch_returns_partial_results_and_dedupes_ticket_save() {
+        FileRepository fileRepository = mock(FileRepository.class);
+        FileAccessDecisionService accessDecisionService = mock(FileAccessDecisionService.class);
+        FileViewTicketStore fileViewTicketStore = mock(FileViewTicketStore.class);
+        TicketIdGenerator ticketIdGenerator = mock(TicketIdGenerator.class);
+        ObjectStorageProperties properties = new ObjectStorageProperties();
+        properties.setProtectedViewExpireSeconds(120L);
+        FileViewTicketService service = new FileViewTicketService(
+            fileRepository,
+            accessDecisionService,
+            fileViewTicketStore,
+            properties,
+            ticketIdGenerator
+        );
+
+        FileEntity protectedFile = createFileEntity(31L, FileClassCode.ARTICLE_CONTENT_IMAGE);
+        FileEntity publicFile = createFileEntity(44L, FileClassCode.BOARD_IMAGE);
+
+        when(fileRepository.findByIdAndDeletedAtIsNull(31L)).thenReturn(Optional.of(protectedFile));
+        when(fileRepository.findByIdAndDeletedAtIsNull(44L)).thenReturn(Optional.of(publicFile));
+        when(fileRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
+        when(accessDecisionService.decide(protectedFile)).thenReturn(FileAccessDecision.protectedAccess());
+        when(accessDecisionService.decide(publicFile)).thenReturn(FileAccessDecision.publicAccess());
+        when(ticketIdGenerator.generate("fv_")).thenReturn("fv_batch_ticket");
+
+        FileViewTicketBatchResponse response = service.issueBatch(List.of(
+            new FileViewTicketBatchItemRequest(31L, "medium"),
+            new FileViewTicketBatchItemRequest(31L, "medium"),
+            new FileViewTicketBatchItemRequest(44L, "thumb"),
+            new FileViewTicketBatchItemRequest(99L, null)
+        ));
+
+        assertThat(response.items()).hasSize(4);
+
+        FileViewTicketBatchItemResponse firstProtected = response.items().get(0);
+        assertThat(firstProtected.success()).isTrue();
+        assertThat(firstProtected.protectedFile()).isTrue();
+        assertThat(firstProtected.viewUrl()).contains("ticket=fv_batch_ticket");
+
+        FileViewTicketBatchItemResponse duplicateProtected = response.items().get(1);
+        assertThat(duplicateProtected.success()).isTrue();
+        assertThat(duplicateProtected.viewUrl()).isEqualTo(firstProtected.viewUrl());
+
+        FileViewTicketBatchItemResponse publicItem = response.items().get(2);
+        assertThat(publicItem.success()).isTrue();
+        assertThat(publicItem.protectedFile()).isFalse();
+        assertThat(publicItem.viewUrl()).isEqualTo("/api/files/44/view?variant=thumb");
+
+        FileViewTicketBatchItemResponse missing = response.items().get(3);
+        assertThat(missing.success()).isFalse();
+        assertThat(missing.errorCode()).isEqualTo(ErrorCode.FILE_NOT_FOUND.getCode());
+
+        verify(fileViewTicketStore, times(1)).save(
+            eq("fv_batch_ticket"),
+            eq(31L),
+            eq(Duration.ofSeconds(120L))
+        );
+    }
+
+    @Test
+    void issueBatch_throws_when_exceeding_configured_max_items() {
+        FileRepository fileRepository = mock(FileRepository.class);
+        FileAccessDecisionService accessDecisionService = mock(FileAccessDecisionService.class);
+        FileViewTicketStore fileViewTicketStore = mock(FileViewTicketStore.class);
+        TicketIdGenerator ticketIdGenerator = mock(TicketIdGenerator.class);
+        ObjectStorageProperties properties = new ObjectStorageProperties();
+        properties.setViewTicketBatchMaxItems(2);
+        FileViewTicketService service = new FileViewTicketService(
+            fileRepository,
+            accessDecisionService,
+            fileViewTicketStore,
+            properties,
+            ticketIdGenerator
+        );
+
+        assertThatThrownBy(() -> service.issueBatch(List.of(
+            new FileViewTicketBatchItemRequest(1L, null),
+            new FileViewTicketBatchItemRequest(2L, null),
+            new FileViewTicketBatchItemRequest(3L, null)
+        )))
+            .isInstanceOf(ApiException.class)
+            .extracting(ex -> ((ApiException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.COMMON_BAD_REQUEST);
     }
 
     private FileEntity createFileEntity(Long id, String fileClassCode) {
