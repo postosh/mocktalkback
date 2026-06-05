@@ -8,7 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.mocktalkback.global.common.dto.ErrorCode;
 import com.mocktalkback.global.config.LocaleConfig;
@@ -27,6 +30,7 @@ class ApiMessageResolverTest {
     @AfterEach
     void clearLocale() {
         LocaleContextHolder.resetLocaleContext();
+        RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
@@ -37,6 +41,9 @@ class ApiMessageResolverTest {
 
     @Test
     void resolves_english_when_locale_is_en() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept-Language", "en");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
         LocaleContextHolder.setLocale(java.util.Locale.ENGLISH);
         assertThat(messageResolver.resolve(ErrorCode.COMMON_BAD_REQUEST))
                 .isEqualTo("Invalid request.");

@@ -32,17 +32,11 @@ public class ApiMessageResolver {
     }
 
     private Locale resolveApiLocale() {
+        if (RequestContextHolder.getRequestAttributes() == null) {
+            return DEFAULT_LOCALE;
+        }
         Locale locale = LocaleContextHolder.getLocale();
-        if (locale == null) {
-            return DEFAULT_LOCALE;
-        }
-        if (!"en".equalsIgnoreCase(locale.getLanguage())) {
-            return DEFAULT_LOCALE;
-        }
-        if (RequestContextHolder.getRequestAttributes() != null) {
-            return Locale.ENGLISH;
-        }
-        if (Locale.ENGLISH.equals(locale)) {
+        if (locale != null && "en".equalsIgnoreCase(locale.getLanguage())) {
             return Locale.ENGLISH;
         }
         return DEFAULT_LOCALE;
